@@ -1,4 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
+{-# Language StandaloneDeriving #-}
+{-# Language DeriveDataTypeable #-}
 
 module SpatialMath.Xyz ( Xyz(..)
                        , zipWithXyz
@@ -13,7 +15,13 @@ module SpatialMath.Xyz ( Xyz(..)
                        ) where
 
 
+import Data.Data ( Data )
+import Data.Typeable ( Typeable1 )
+
 data Xyz a = Xyz a a a deriving (Show, Eq)
+
+deriving instance Typeable1 Xyz
+deriving instance Data a => Data (Xyz a)
 
 instance Functor Xyz where
   fmap f (Xyz x y z) = Xyz (f x) (f y) (f z)

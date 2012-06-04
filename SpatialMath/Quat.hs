@@ -1,4 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
+{-# Language StandaloneDeriving #-}
+{-# Language DeriveDataTypeable #-}
 
 module SpatialMath.Quat ( Quat(..)
                         , zipWithQuat
@@ -9,7 +11,13 @@ module SpatialMath.Quat ( Quat(..)
                         , qmult'
                         ) where
 
+import Data.Data ( Data )
+import Data.Typeable ( Typeable1 )
+
 data Quat a = Quat a a a a deriving (Show, Eq)
+
+deriving instance Typeable1 Quat
+deriving instance Data a => Data (Quat a)
 
 instance Functor Quat where
   fmap f (Quat q0 q1 q2 q3) = Quat (f q0) (f q1) (f q2) (f q3)
