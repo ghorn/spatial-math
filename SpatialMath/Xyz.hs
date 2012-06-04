@@ -12,9 +12,13 @@ module SpatialMath.Xyz ( Xyz(..)
                        , scale
                        , normalizeTo
                        , normalize
+                       , mult3x3ByXyz
+                       , mult3x3TransposeByXyz
                        ) where
 
 
+import Numeric.LinearAlgebra ( (@@>), Matrix )
+import Foreign.Storable ( Storable )
 import Data.Data ( Data )
 import Data.Typeable ( Typeable1 )
 
@@ -74,23 +78,18 @@ normalizeTo newNorm vec = scale (newNorm/(norm(vec) + 1e-12))
 normalize :: Floating a => Xyz a -> Xyz a -> Xyz a
 normalize = normalizeTo 1
 
-  
--- // v_out = M*v
--- // M is 3x3 row-major matrix
--- void
--- xyzMult3x3ByXyz (xyz_t * v_out, const double * const M, const xyz_t * const v)
--- {
---   v_out->x = M[0]*v->x +  M[1]*v->y +  M[2]*v->z;
---   v_out->y = M[3]*v->x +  M[4]*v->y +  M[5]*v->z;
---   v_out->z = M[6]*v->x +  M[7]*v->y +  M[8]*v->z;
--- }
--- 
+-- | v_out = M*v
+mult3x3ByXyz :: (Num a, Storable a) => Matrix a -> Xyz a -> Xyz a
+mult3x3ByXyz mat (Xyz x y z) = Xyz x' y' z'
+  where
+    x' = (mat @@> (0,0))*x + (mat @@> (0,1))*y +  (mat @@> (0,2))*z
+    y' = (mat @@> (1,0))*x + (mat @@> (1,1))*y +  (mat @@> (1,2))*z
+    z' = (mat @@> (2,0))*x + (mat @@> (2,1))*y +  (mat @@> (2,2))*z
+
 -- // v_out = M^T*v
--- // M is 3x3 row-major matrix
--- void
--- xyz_mult_3x3_transpose_by_xyz(xyz_t * v_out, const double * const M, const xyz_t * const v)
--- {
---   v_out->x = M[0]*v->x +  M[3]*v->y +  M[6]*v->z;
---   v_out->y = M[1]*v->x +  M[4]*v->y +  M[7]*v->z;
---   v_out->z = M[2]*v->x +  M[5]*v->y +  M[8]*v->z;
--- }
+mult3x3TransposeByXyz :: (Num a, Storable a) => Matrix a -> Xyz a -> Xyz a
+mult3x3TransposeByXyz mat (Xyz x y z) = Xyz x' y' z'
+  where
+    x' = (mat @@> (0,0))*x + (mat @@> (1,0))*y +  (mat @@> (2,0))*z
+    y' = (mat @@> (0,1))*x + (mat @@> (1,1))*y +  (mat @@> (2,1))*z
+    z' = (mat @@> (0,2))*x + (mat @@> (1,2))*y +  (mat @@> (2,2))*z
