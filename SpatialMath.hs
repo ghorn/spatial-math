@@ -21,15 +21,16 @@ module SpatialMath ( module Xyz
                    , rotVecByQuatB2A
                    ) where
 
-import qualified SpatialMath.Xyz as Xyz
-import qualified SpatialMath.Quat as Quat
-import SpatialMath.Xyz ( Xyz(..) )
-import SpatialMath.Quat ( Quat(..) )
+import qualified Xyz
+import qualified Quat
+import Xyz ( Xyz(..) )
+import Quat ( Quat(..) )
 
 import Numeric.LinearAlgebra
 import Foreign.Storable ( Storable )
 import Data.Data ( Data )
 import Data.Typeable ( Typeable1 )
+
 
 data Euler a = Euler a a a deriving (Eq, Show)
 

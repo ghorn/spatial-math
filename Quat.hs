@@ -2,14 +2,14 @@
 {-# Language StandaloneDeriving #-}
 {-# Language DeriveDataTypeable #-}
 
-module SpatialMath.Quat ( Quat(..)
-                        , zipWithQuat
-                        , inv
-                        , norm
-                        , normalize
-                        , qmult
-                        , qmult'
-                        ) where
+module Quat ( Quat(..)
+            , zipWithQuat
+            , inv
+            , norm
+            , normalize
+            , qmult
+            , qmult'
+            ) where
 
 import Data.Data ( Data )
 import Data.Typeable ( Typeable1 )

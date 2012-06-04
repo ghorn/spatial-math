@@ -2,19 +2,19 @@
 {-# Language StandaloneDeriving #-}
 {-# Language DeriveDataTypeable #-}
 
-module SpatialMath.Xyz ( Xyz(..)
-                       , zipWithXyz
-                       , cross
-                       , dot
-                       , normSquared
-                       , norm
-                       , distance
-                       , scale
-                       , normalizeTo
-                       , normalize
-                       , mult3x3ByXyz
-                       , mult3x3TransposeByXyz
-                       ) where
+module Xyz ( Xyz(..)
+           , zipWithXyz
+           , cross
+           , dot
+           , normSquared
+           , norm
+           , distance
+           , scale
+           , normalizeTo
+           , normalize
+           , mult3x3ByXyz
+           , mult3x3TransposeByXyz
+           ) where
 
 
 import Numeric.LinearAlgebra ( (@@>), Matrix )
