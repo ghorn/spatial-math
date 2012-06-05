@@ -37,10 +37,10 @@ instance (Num a) => Num (Xyz a) where
   (+) = zipWithXyz (+)
   (-) = zipWithXyz (-)
   negate = fmap negate
-  (*) = error "(*) undefined for Xyz"
-  abs = error "abs undefined for Xyz"
-  signum = error "signum undefined for Xyz"
-  fromInteger = error "fromInteger undefined for Xyz"
+  (*) = zipWithXyz (*)
+  abs = fmap abs
+  signum = fmap signum
+  fromInteger k = fmap fromInteger (Xyz k k k)
 
 -- | c = a (cross) b
 cross :: Num a => Xyz a -> Xyz a -> Xyz a

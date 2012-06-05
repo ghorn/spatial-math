@@ -31,7 +31,7 @@ instance (Num a, Ord a) => Num (Quat a) where
   negate = fmap negate
   (*) = qmult
   abs = fmap abs
-  signum = error "signum undefined for Quat"
+  signum = fmap signum
   fromInteger = error "fromInteger undefined for Quat"
 
 -- | q_out = q_in^-1
