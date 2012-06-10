@@ -13,12 +13,15 @@ module SpatialMath ( module Xyz
                    , quatOfEuler321
                    , dcmOfQuat
                    , dcmOfQuatB2A
+                   , dcmOfEuler321
                    , quatOfDcm
                    , quatOfDcmB2A
                    , rotVecByDcm
                    , rotVecByDcmB2A
                    , rotVecByQuat
                    , rotVecByQuatB2A
+                   , rotVecByEuler
+                   , rotVecByEulerB2A
                    ) where
 
 import qualified Xyz
@@ -128,6 +131,9 @@ dcmOfQuat (Quat q0 q1 q2 q3) = fromLists [ [r0, r1, r2]
     r5 = 2*(q2*q3 + q0*q1)
     r8 = q0*q0 - q1*q1 - q2*q2 + q3*q3
 
+dcmOfEuler321 :: (Floating a, Element a, Ord a) => Euler a -> Matrix a
+dcmOfEuler321 = dcmOfQuat . quatOfEuler321
+
 dcmOfQuatB2A :: (Num a, Element a) => Quat a -> Matrix a
 dcmOfQuatB2A = dcmOfQuat . Quat.inv
 
@@ -146,3 +152,9 @@ rotVecByQuat q = rotVecByDcm (dcmOfQuat q)
 
 rotVecByQuatB2A :: (Num a, Element a) => Quat a -> Xyz a -> Xyz a
 rotVecByQuatB2A q = rotVecByDcmB2A (dcmOfQuat q)
+
+rotVecByEuler :: (Floating a, Element a, Ord a) => Euler a -> Xyz a -> Xyz a
+rotVecByEuler = rotVecByDcm . dcmOfEuler321
+
+rotVecByEulerB2A :: (Floating a, Element a, Ord a) => Euler a -> Xyz a -> Xyz a
+rotVecByEulerB2A = rotVecByDcmB2A . dcmOfEuler321
