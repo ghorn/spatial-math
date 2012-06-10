@@ -8,6 +8,8 @@ module SpatialMath ( module Xyz
                    , Quat(..)
                    , Euler(..)
                    , rotateXyzAboutX
+                   , rotateXyzAboutY
+                   , rotateXyzAboutZ
                    , euler321OfQuat
                    , euler321OfDcm
                    , quatOfEuler321
@@ -49,6 +51,26 @@ rotateXyzAboutX (Xyz ax ay az) rotAngle = Xyz bx by bz
     bx =  ax
     by =  ay*cosTheta + az*sinTheta
     bz = -ay*sinTheta + az*cosTheta
+
+rotateXyzAboutY :: Floating a => Xyz a -> a -> Xyz a
+rotateXyzAboutY (Xyz ax ay az) rotAngle = Xyz bx by bz
+  where
+    cosTheta = cos rotAngle
+    sinTheta = sin rotAngle
+
+    bx =  ax*cosTheta - az*sinTheta
+    by =  ay
+    bz =  ax*sinTheta + az*cosTheta
+
+rotateXyzAboutZ :: Floating a => Xyz a -> a -> Xyz a
+rotateXyzAboutZ (Xyz ax ay az) rotAngle = Xyz bx by bz
+  where
+    cosTheta = cos rotAngle
+    sinTheta = sin rotAngle
+
+    bx =  ax*cosTheta + ay*sinTheta
+    by = -ax*sinTheta + ay*cosTheta
+    bz =  az
 
 euler321OfQuat :: RealFloat a => Quat a -> Euler a
 euler321OfQuat (Quat q0 q1 q2 q3) = Euler yaw pitch roll
