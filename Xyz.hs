@@ -42,6 +42,27 @@ instance (Num a) => Num (Xyz a) where
   signum = fmap signum
   fromInteger k = fmap fromInteger (Xyz k k k)
 
+instance (Fractional a) => Fractional (Xyz a) where
+  fromRational r = fmap fromRational (Xyz r r r)
+  (/) = zipWithXyz (/)
+
+instance (Floating a) => Floating (Xyz a) where
+  pi = Xyz pi pi pi
+  exp   = fmap exp
+  log   = fmap log
+  sin   = fmap sin
+  cos   = fmap cos
+  tan   = fmap tan
+  asin  = fmap asin
+  acos  = fmap acos
+  atan  = fmap atan
+  sinh  = fmap sinh
+  cosh  = fmap cosh
+  tanh  = fmap tanh
+  asinh = fmap asinh
+  acosh = fmap acosh
+  atanh = fmap atanh
+
 -- | c = a (cross) b
 cross :: Num a => Xyz a -> Xyz a -> Xyz a
 cross (Xyz ax ay az) (Xyz bx by bz) = Xyz cx cy cz
