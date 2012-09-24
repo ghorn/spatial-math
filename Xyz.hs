@@ -16,11 +16,11 @@ module Xyz ( Xyz(..)
            , mult3x3TransposeByXyz
            ) where
 
-
 import Numeric.LinearAlgebra ( (@@>), Matrix )
 import Foreign.Storable ( Storable )
 import Data.Data ( Data )
 import Data.Typeable ( Typeable1 )
+import System.Random ( Random(..) )
 
 data Xyz a = Xyz a a a deriving (Show, Eq)
 
@@ -29,6 +29,18 @@ deriving instance Data a => Data (Xyz a)
 
 instance Functor Xyz where
   fmap f (Xyz x y z) = Xyz (f x) (f y) (f z)
+
+instance Random a => Random (Xyz a) where
+  random g0 = (Xyz x y z, gz)
+    where
+      (x,gx) = random g0
+      (y,gy) = random gx
+      (z,gz) = random gy
+  randomR (Xyz x0 y0 z0, Xyz x1 y1 z1) g0 = (Xyz x y z, gz)
+    where
+      (x,gx) = randomR (x0,x1) g0
+      (y,gy) = randomR (y0,y1) gx
+      (z,gz) = randomR (z0,z1) gy
 
 zipWithXyz :: (a -> b -> c) -> Xyz a -> Xyz b -> Xyz c
 zipWithXyz f (Xyz x0 y0 z0) (Xyz x1 y1 z1) = Xyz (f x0 x1) (f y0 y1) (f z0 z1)

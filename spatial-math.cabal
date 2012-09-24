@@ -1,5 +1,5 @@
 name:                spatial-math
-version:             0.1.5
+version:             0.1.6
 synopsis:            3d math including quaternions/euler angles/dcms and utility functions
 description:         This is a port of my 'mathlib' C library: https://github.com/ghorn/mathlib
 license:             BSD3
@@ -17,7 +17,8 @@ library
                        Xyz
   -- other-modules:       
   build-depends:       base >= 4 && < 5,
-                       hmatrix >= 0.14 && < 0.15
+                       hmatrix >= 0.14 && < 0.15,
+                       random
 
 source-repository head
   type:     git
