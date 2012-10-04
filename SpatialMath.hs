@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# Language StandaloneDeriving #-}
 {-# Language DeriveDataTypeable #-}
+{-# Language DeriveFunctor #-}
 
 module SpatialMath ( module Xyz
                    , module Quat
@@ -36,11 +37,11 @@ import Foreign.Storable ( Storable )
 import Data.Data ( Data )
 import Data.Typeable ( Typeable1 )
 
-
-data Euler a = Euler a a a deriving (Eq, Show)
+data Euler a = Euler a a a deriving (Eq, Show) -- {yaw, pitch, roll}
 
 deriving instance Typeable1 Euler
 deriving instance Data a => Data (Euler a)
+deriving instance Functor Euler
 
 rotateXyzAboutX :: Floating a => Xyz a -> a -> Xyz a
 rotateXyzAboutX (Xyz ax ay az) rotAngle = Xyz bx by bz

@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# Language StandaloneDeriving #-}
 {-# Language DeriveDataTypeable #-}
+{-# Language DeriveFunctor #-}
 
 module Quat ( Quat(..)
             , zipWithQuat
@@ -18,9 +19,7 @@ data Quat a = Quat a a a a deriving (Show, Eq)
 
 deriving instance Typeable1 Quat
 deriving instance Data a => Data (Quat a)
-
-instance Functor Quat where
-  fmap f (Quat q0 q1 q2 q3) = Quat (f q0) (f q1) (f q2) (f q3)
+deriving instance Functor Quat
 
 zipWithQuat :: (a -> b -> c) -> Quat a -> Quat b -> Quat c
 zipWithQuat f (Quat p0 p1 p2 p3) (Quat q0 q1 q2 q3) = Quat (f p0 q0) (f p1 q1) (f p2 q2) (f p3 q3)
