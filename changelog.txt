@@ -1,0 +1,4 @@
+0.2.0
+- convert to using `linear` V3, M33, Quaternion types
+- doctests
+- fix long unknown bug: rotateXyzAbout{X,Y,Z} was rotating opposite direction from intended
