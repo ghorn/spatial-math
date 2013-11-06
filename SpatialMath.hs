@@ -37,12 +37,23 @@ import Foreign.Storable ( Storable )
 import Data.Data ( Data )
 import Data.Typeable ( Typeable1 )
 
-data Euler a = Euler a a a deriving (Eq, Show) -- {yaw, pitch, roll}
+-- | 3-2-1 Euler angle rotation sequence
+data Euler a = Euler { eYaw :: a
+                     , ePitch :: a
+                     , eRoll :: a
+                     } deriving (Eq, Show)
 
 deriving instance Typeable1 Euler
 deriving instance Data a => Data (Euler a)
 deriving instance Functor Euler
 
+-- | Rotate a vector about the X axis
+--
+-- >>> rotateXyzAboutX (Xyz 0 1 0) (pi/2)
+-- Xyz 0.0 6.123233995736766e-17 1.0
+--
+-- >>> rotateXyzAboutX (Xyz 0 0 1) (pi/2)
+-- Xyz 0.0 (-1.0) 6.123233995736766e-17
 rotateXyzAboutX :: Floating a => Xyz a -> a -> Xyz a
 rotateXyzAboutX (Xyz ax ay az) rotAngle = Xyz bx by bz
   where
@@ -50,29 +61,59 @@ rotateXyzAboutX (Xyz ax ay az) rotAngle = Xyz bx by bz
     sinTheta = sin rotAngle
 
     bx =  ax
-    by =  ay*cosTheta + az*sinTheta
-    bz = -ay*sinTheta + az*cosTheta
+    by =  ay*cosTheta - az*sinTheta
+    bz =  ay*sinTheta + az*cosTheta
 
+-- | Rotate a vector about the Y axis
+--
+-- >>> rotateXyzAboutY (Xyz 0 0 1) (pi/2)
+-- Xyz 1.0 0.0 6.123233995736766e-17
+--
+-- >>> rotateXyzAboutY (Xyz 1 0 0) (pi/2)
+-- Xyz 6.123233995736766e-17 0.0 (-1.0)
 rotateXyzAboutY :: Floating a => Xyz a -> a -> Xyz a
 rotateXyzAboutY (Xyz ax ay az) rotAngle = Xyz bx by bz
   where
     cosTheta = cos rotAngle
     sinTheta = sin rotAngle
 
-    bx =  ax*cosTheta - az*sinTheta
+    bx =  ax*cosTheta + az*sinTheta
     by =  ay
-    bz =  ax*sinTheta + az*cosTheta
+    bz = -ax*sinTheta + az*cosTheta
 
+-- | Rotate a vector about the Z axis
+--
+-- >>> rotateXyzAboutZ (Xyz 1 0 0) (pi/2)
+-- Xyz 6.123233995736766e-17 1.0 0.0
+--
+-- >>> rotateXyzAboutZ (Xyz 0 1 0) (pi/2)
+-- Xyz (-1.0) 6.123233995736766e-17 0.0
+--
 rotateXyzAboutZ :: Floating a => Xyz a -> a -> Xyz a
 rotateXyzAboutZ (Xyz ax ay az) rotAngle = Xyz bx by bz
   where
     cosTheta = cos rotAngle
     sinTheta = sin rotAngle
 
-    bx =  ax*cosTheta + ay*sinTheta
-    by = -ax*sinTheta + ay*cosTheta
+    bx =  ax*cosTheta - ay*sinTheta
+    by =  ax*sinTheta + ay*cosTheta
     bz =  az
 
+
+-- | Convert quaternion to Euler angles
+--
+-- >>> euler321OfQuat (Quat 1.0 0.0 0.0 0.0)
+-- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 0.0}
+--
+-- >>> euler321OfQuat (Quat (sqrt(2)/2) (sqrt(2)/2) 0.0 0.0)
+-- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 1.5707963267948966}
+--
+-- >>> euler321OfQuat (Quat (sqrt(2)/2) 0.0 (sqrt(2)/2) 0.0)
+-- Euler {eYaw = 0.0, ePitch = 1.5707963267948966, eRoll = 0.0}
+--
+-- >>> euler321OfQuat (Quat (sqrt(2)/2) 0.0 0.0 (sqrt(2)/2))
+-- Euler {eYaw = 1.5707963267948966, ePitch = -0.0, eRoll = 0.0}
+--
 euler321OfQuat :: RealFloat a => Quat a -> Euler a
 euler321OfQuat (Quat q0 q1 q2 q3) = Euler yaw pitch roll
   where
@@ -90,12 +131,34 @@ euler321OfQuat (Quat q0 q1 q2 q3) = Euler yaw pitch roll
     pitch = asin mr13
     roll  = atan2 r23 r33
 
+-- | convert a DCM to a quaternion
+--
+-- >>> quatOfDcm $ fromLists [[1,0,0], [0,1,0], [0,0,1]]
+-- Quat 1.0 0.0 0.0 0.0
+--
+-- >>> quatOfDcm $ fromLists [[0,1,0], [-1,0,0], [0,0,1]]
+-- Quat 0.7071067811865476 0.0 0.0 0.7071067811865475
+--
+-- >>> let s = sqrt(2)/2 in quatOfDcm $ fromLists [[s,s,0], [-s,s,0], [0,0,1]]
+-- Quat 0.9238795325112867 0.0 0.0 0.3826834323650898
+--
 quatOfDcm :: (Storable a, RealFloat a) => Matrix a -> Quat a
 quatOfDcm = quatOfEuler321 . euler321OfDcm
 
 quatOfDcmB2A :: (Storable a, RealFloat a) => Matrix a -> Quat a
 quatOfDcmB2A = Quat.inv . quatOfDcm
 
+-- | Convert DCM to euler angles
+--
+-- >>> euler321OfDcm $ fromLists [[1,0,0], [0,1,0], [0,0,1]]
+-- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 0.0}
+--
+-- >>> euler321OfDcm $ fromLists [[0,1,0], [-1,0,0], [0,0,1]]
+-- Euler {eYaw = 1.5707963267948966, ePitch = -0.0, eRoll = 0.0}
+--
+-- >>> let s = sqrt(2)/2 in euler321OfDcm $ fromLists [[s,s,0], [-s,s,0], [0,0,1]]
+-- Euler {eYaw = 0.7853981633974483, ePitch = -0.0, eRoll = 0.0}
+--
 euler321OfDcm :: (RealFloat a, Storable a) => Matrix a -> Euler a
 euler321OfDcm r = Euler yaw pitch roll
   where
@@ -108,11 +171,25 @@ euler321OfDcm r = Euler yaw pitch roll
       | otherwise = mr13'
     r23 = r @@> (1,2)
     r33 = r @@> (2,2)
-  
+
     yaw   = atan2 r12 r11
     pitch = asin mr13
     roll  = atan2 r23 r33
 
+-- | Convert Euler angles to quaternion
+--
+-- >>> quatOfEuler321 (Euler 0 0 0)
+-- Quat 1.0 0.0 0.0 0.0
+--
+-- >>> quatOfEuler321 (Euler (pi/2) 0 0)
+-- Quat 0.7071067811865476 0.0 0.0 0.7071067811865475
+--
+-- >>> quatOfEuler321 (Euler 0 (pi/2) 0)
+-- Quat 0.7071067811865476 0.0 0.7071067811865475 0.0
+--
+-- >>> quatOfEuler321 (Euler 0 0 (pi/2))
+-- Quat 0.7071067811865476 0.7071067811865475 0.0 0.0
+--
 quatOfEuler321 :: (Floating a, Ord a) => Euler a -> Quat a
 quatOfEuler321 (Euler yaw pitch roll) = Quat.normalize q
   where
@@ -128,11 +205,22 @@ quatOfEuler321 (Euler yaw pitch roll) = Quat.normalize q
     q3 = cr2*cp2*sy2 - sr2*sp2*cy2
 
     q' = Quat q0 q1 q2 q3
-    
+
     q
       | q0 < 0 = negate q'
       | otherwise = q'
 
+-- | convert a quaternion to a DCM
+--
+-- >>> toLists $ dcmOfQuat $ Quat 1.0 0.0 0.0 0.0
+-- [[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]]
+--
+-- >>> let s = sqrt(2)/2 in toLists $ dcmOfQuat $ Quat s 0.0 0.0 s
+-- [[0.0,1.0000000000000002,0.0],[-1.0000000000000002,0.0,0.0],[0.0,0.0,1.0000000000000002]]
+--
+-- >>> toLists $ dcmOfQuat $ Quat 0.9238795325112867 0.0 0.0 0.3826834323650898
+-- [[0.7071067811865475,0.7071067811865476,0.0],[-0.7071067811865476,0.7071067811865475,0.0],[0.0,0.0,1.0]]
+--
 dcmOfQuat :: (Num a, Element a) => Quat a -> Matrix a
 dcmOfQuat (Quat q0 q1 q2 q3) = fromLists [ [r0, r1, r2]
                                          , [r3, r4, r5]
@@ -143,17 +231,28 @@ dcmOfQuat (Quat q0 q1 q2 q3) = fromLists [ [r0, r1, r2]
     r0 = q0*q0 + q1*q1 - q2*q2 - q3*q3
     r3 = 2*(q1*q2 - q0*q3)
     r6 = 2*(q1*q3 + q0*q2)
-  
+
     -- 2nd column
     r1 = 2*(q1*q2 + q0*q3)
     r4 = q0*q0 - q1*q1 + q2*q2 - q3*q3
     r7 = 2*(q2*q3 - q0*q1)
-  
+
     -- 3rd column
     r2 = 2*(q1*q3 - q0*q2)
     r5 = 2*(q2*q3 + q0*q1)
     r8 = q0*q0 - q1*q1 - q2*q2 + q3*q3
 
+-- | Convert DCM to euler angles
+--
+-- >>> toLists $ dcmOfEuler321 $ Euler {eYaw = 0.0, ePitch = 0, eRoll = 0}
+-- [[1.0,0.0,0.0],[0.0,1.0,0.0],[0.0,0.0,1.0]]
+--
+-- >>> toLists $ dcmOfEuler321 $ Euler {eYaw = pi/2, ePitch = 0, eRoll = 0}
+-- [[2.220446049250313e-16,1.0,0.0],[-1.0,2.220446049250313e-16,0.0],[0.0,0.0,1.0]]
+--
+-- >>> toLists $ dcmOfEuler321 $ Euler {eYaw = pi/4, ePitch = 0, eRoll = 0}
+-- [[0.7071067811865475,0.7071067811865476,0.0],[-0.7071067811865476,0.7071067811865475,0.0],[0.0,0.0,1.0]]
+--
 dcmOfEuler321 :: (Floating a, Element a, Ord a) => Euler a -> Matrix a
 dcmOfEuler321 = dcmOfQuat . quatOfEuler321
 
