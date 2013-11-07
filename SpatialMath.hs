@@ -7,9 +7,6 @@
 {-# Language DeriveTraversable #-}
 
 module SpatialMath ( Euler(..)
-                   , M33
-                   , V3(..)
-                   , Quaternion(..)
                    , rotateXyzAboutX
                    , rotateXyzAboutY
                    , rotateXyzAboutZ
@@ -27,6 +24,10 @@ module SpatialMath ( Euler(..)
                    , rotVecByQuatB2A
                    , rotVecByEuler
                    , rotVecByEulerB2A
+                     -- * re-exported from linear
+                   , M33
+                   , V3(..)
+                   , Quaternion(..)
                    ) where
 
 import Data.Data ( Data )
