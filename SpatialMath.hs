@@ -1,7 +1,10 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# Language StandaloneDeriving #-}
 {-# Language DeriveDataTypeable #-}
+{-# LANGUAGE CPP #-}
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
 {-# Language DeriveGeneric #-}
+#endif
 {-# Language DeriveFunctor #-}
 {-# Language DeriveFoldable #-}
 {-# Language DeriveTraversable #-}
@@ -34,7 +37,12 @@ import Data.Data ( Data )
 import Data.Foldable ( Foldable )
 import Data.Traversable ( Traversable )
 import Data.Typeable ( Typeable1 )
-import GHC.Generics ( Generic, Generic1 )
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
+import GHC.Generics (Generic)
+#endif
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 706
+import GHC.Generics (Generic1)
+#endif
 import Linear
 
 normalize' :: Floating a => Quaternion a -> Quaternion a
@@ -49,7 +57,14 @@ normalize' q = fmap (* normInv) q
 data Euler a = Euler { eYaw :: a
                      , ePitch :: a
                      , eRoll :: a
-                     } deriving (Eq, Show, Generic, Generic1, Functor, Foldable, Traversable, Ord)
+                     } deriving (Eq, Show, Functor, Foldable, Traversable, Ord
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
+                                , Generic
+#endif
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 706
+                                , Generic1
+#endif
+                                )
 
 deriving instance Typeable1 Euler
 deriving instance Data a => Data (Euler a)
