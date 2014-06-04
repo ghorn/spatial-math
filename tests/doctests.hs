@@ -5,4 +5,4 @@ module Main where
 import Test.DocTest
 
 main :: IO ()
-main = doctest ["SpatialMath.hs"]
+main = doctest ["src/Types.hs", "src/SpatialMath.hs"]

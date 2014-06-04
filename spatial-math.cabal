@@ -29,7 +29,6 @@ source-repository head
 
 test-suite doctests
   type:                exitcode-stdio-1.0
-  hs-source-dirs:      src
   main-is:             doctests.hs
   build-depends:       base >= 4 && < 5,
                        doctest >= 0.8
