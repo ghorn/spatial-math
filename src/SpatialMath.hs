@@ -36,7 +36,7 @@ module SpatialMath ( Euler(..)
 import Data.Data ( Data )
 import Data.Foldable ( Foldable )
 import Data.Traversable ( Traversable )
-import Data.Typeable ( Typeable1 )
+import Data.Typeable ( Typeable )
 #if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
 import GHC.Generics (Generic)
 #endif
@@ -66,7 +66,7 @@ data Euler a = Euler { eYaw :: a
 #endif
                                 )
 
-deriving instance Typeable1 Euler
+deriving instance Typeable Euler
 deriving instance Data a => Data (Euler a)
 
 -- | Rotate a vector about the X axis
