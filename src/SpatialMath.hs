@@ -1,13 +1,4 @@
 {-# OPTIONS_GHC -Wall #-}
-{-# Language StandaloneDeriving #-}
-{-# Language DeriveDataTypeable #-}
-{-# LANGUAGE CPP #-}
-#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
-{-# Language DeriveGeneric #-}
-#endif
-{-# Language DeriveFunctor #-}
-{-# Language DeriveFoldable #-}
-{-# Language DeriveTraversable #-}
 
 module SpatialMath ( Euler(..)
                    , rotateXyzAboutX
@@ -33,17 +24,9 @@ module SpatialMath ( Euler(..)
                    , Quaternion(..)
                    ) where
 
-import Data.Data ( Data )
-import Data.Foldable ( Foldable )
-import Data.Traversable ( Traversable )
-import Data.Typeable ( Typeable )
-#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
-import GHC.Generics (Generic)
-#endif
-#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 706
-import GHC.Generics (Generic1)
-#endif
 import Linear
+
+import Types
 
 normalize' :: Floating a => Quaternion a -> Quaternion a
 normalize' q = fmap (* normInv) q
@@ -52,22 +35,6 @@ normalize' q = fmap (* normInv) q
 
 --normalize' :: (Floating a, Epsilon a) => Quaternion a -> Quaternion a
 --normalize' = normalize
-
--- | 3-2-1 Euler angle rotation sequence
-data Euler a = Euler { eYaw :: a
-                     , ePitch :: a
-                     , eRoll :: a
-                     } deriving (Eq, Show, Functor, Foldable, Traversable, Ord
-#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
-                                , Generic
-#endif
-#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 706
-                                , Generic1
-#endif
-                                )
-
-deriving instance Typeable Euler
-deriving instance Data a => Data (Euler a)
 
 -- | Rotate a vector about the X axis
 --
