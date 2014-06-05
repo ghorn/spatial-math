@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wall #-}
+{-# Language ScopedTypeVariables #-}
 
 module SpatialMath ( Euler(..)
                    , rotateXyzAboutX
@@ -31,7 +32,7 @@ import Types
 -- $setup
 -- |
 -- >>> :{
---     let trunc :: (Functor f) => f Double -> f Double
+--     let trunc :: Functor f => f Double -> f Double
 --         trunc = fmap trunc'
 --           where
 --             trunc' x
