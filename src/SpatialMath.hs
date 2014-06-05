@@ -224,24 +224,15 @@ quatOfEuler321 (Euler yaw pitch roll) = normalize' q
 -- V3 (V3 0.7071067811865475 0.7071067811865476 0.0) (V3 (-0.7071067811865476) 0.7071067811865475 0.0) (V3 0.0 0.0 1.0)
 --
 dcmOfQuat :: Num a => Quaternion a -> M33 a
-dcmOfQuat (Quaternion q0 (V3 q1 q2 q3)) = V3 (V3 r0 r1 r2)
-                                             (V3 r3 r4 r5)
-                                             (V3 r6 r7 r8)
+dcmOfQuat q = V3
+              (V3 m11 m21 m31)
+              (V3 m12 m22 m32)
+              (V3 m13 m23 m33)
   where
-    -- 1st column
-    r0 = q0*q0 + q1*q1 - q2*q2 - q3*q3
-    r3 = 2*(q1*q2 - q0*q3)
-    r6 = 2*(q1*q3 + q0*q2)
-
-    -- 2nd column
-    r1 = 2*(q1*q2 + q0*q3)
-    r4 = q0*q0 - q1*q1 + q2*q2 - q3*q3
-    r7 = 2*(q2*q3 - q0*q1)
-
-    -- 3rd column
-    r2 = 2*(q1*q3 - q0*q2)
-    r5 = 2*(q2*q3 + q0*q1)
-    r8 = q0*q0 - q1*q1 - q2*q2 + q3*q3
+    V3
+      (V3 m11 m12 m13)
+      (V3 m21 m22 m23)
+      (V3 m31 m32 m33) = fromQuaternion q
 
 -- | Convert DCM to euler angles
 --
