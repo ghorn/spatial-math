@@ -28,6 +28,19 @@ import Linear
 
 import Types
 
+-- $setup
+-- |
+-- >>> :{
+--     let trunc :: (Functor f) => f Double -> f Double
+--         trunc = fmap trunc'
+--           where
+--             trunc' x
+--               | nearZero x = 0
+--               | nearZero (x - 1) = 1
+--               | nearZero (x + 1) = -1
+--               | otherwise = x
+-- :}
+
 normalize' :: Floating a => Quaternion a -> Quaternion a
 normalize' q = fmap (* normInv) q
   where
@@ -38,11 +51,11 @@ normalize' q = fmap (* normInv) q
 
 -- | Rotate a vector about the X axis
 --
--- >>> rotateXyzAboutX (V3 0 1 0) (pi/2)
--- V3 0.0 6.123233995736766e-17 1.0
+-- >>> trunc $ rotateXyzAboutX (V3 0 1 0) (pi/2)
+-- V3 0.0 0.0 1.0
 --
--- >>> rotateXyzAboutX (V3 0 0 1) (pi/2)
--- V3 0.0 (-1.0) 6.123233995736766e-17
+-- >>> trunc $ rotateXyzAboutX (V3 0 0 1) (pi/2)
+-- V3 0.0 (-1.0) 0.0
 rotateXyzAboutX :: Floating a => V3 a -> a -> V3 a
 rotateXyzAboutX (V3 ax ay az) rotAngle = V3 bx by bz
   where
@@ -55,11 +68,11 @@ rotateXyzAboutX (V3 ax ay az) rotAngle = V3 bx by bz
 
 -- | Rotate a vector about the Y axis
 --
--- >>> rotateXyzAboutY (V3 0 0 1) (pi/2)
--- V3 1.0 0.0 6.123233995736766e-17
+-- >>> trunc $ rotateXyzAboutY (V3 0 0 1) (pi/2)
+-- V3 1.0 0.0 0.0
 --
--- >>> rotateXyzAboutY (V3 1 0 0) (pi/2)
--- V3 6.123233995736766e-17 0.0 (-1.0)
+-- >>> trunc $ rotateXyzAboutY (V3 1 0 0) (pi/2)
+-- V3 0.0 0.0 (-1.0)
 rotateXyzAboutY :: Floating a => V3 a -> a -> V3 a
 rotateXyzAboutY (V3 ax ay az) rotAngle = V3 bx by bz
   where
@@ -72,11 +85,11 @@ rotateXyzAboutY (V3 ax ay az) rotAngle = V3 bx by bz
 
 -- | Rotate a vector about the Z axis
 --
--- >>> rotateXyzAboutZ (V3 1 0 0) (pi/2)
--- V3 6.123233995736766e-17 1.0 0.0
+-- >>> trunc $ rotateXyzAboutZ (V3 1 0 0) (pi/2)
+-- V3 0.0 1.0 0.0
 --
--- >>> rotateXyzAboutZ (V3 0 1 0) (pi/2)
--- V3 (-1.0) 6.123233995736766e-17 0.0
+-- >>> trunc $ rotateXyzAboutZ (V3 0 1 0) (pi/2)
+-- V3 (-1.0) 0.0 0.0
 --
 rotateXyzAboutZ :: Floating a => V3 a -> a -> V3 a
 rotateXyzAboutZ (V3 ax ay az) rotAngle = V3 bx by bz
@@ -204,8 +217,8 @@ quatOfEuler321 (Euler yaw pitch roll) = normalize' q
 -- >>> dcmOfQuat $ Quaternion 1.0 (V3 0.0 0.0 0.0)
 -- V3 (V3 1.0 0.0 0.0) (V3 0.0 1.0 0.0) (V3 0.0 0.0 1.0)
 --
--- >>> let s = sqrt(2)/2 in dcmOfQuat $ Quaternion s (V3 0.0 0.0 s)
--- V3 (V3 0.0 1.0000000000000002 0.0) (V3 (-1.0000000000000002) 0.0 0.0) (V3 0.0 0.0 1.0000000000000002)
+-- >>> let s = sqrt(2)/2 in fmap trunc $ dcmOfQuat $ Quaternion s (V3 0.0 0.0 s)
+-- V3 (V3 0.0 1.0 0.0) (V3 (-1.0) 0.0 0.0) (V3 0.0 0.0 1.0)
 --
 -- >>> dcmOfQuat $ Quaternion 0.9238795325112867 (V3 0.0 0.0 0.3826834323650898)
 -- V3 (V3 0.7071067811865475 0.7071067811865476 0.0) (V3 (-0.7071067811865476) 0.7071067811865475 0.0) (V3 0.0 0.0 1.0)
@@ -235,8 +248,8 @@ dcmOfQuat (Quaternion q0 (V3 q1 q2 q3)) = V3 (V3 r0 r1 r2)
 -- >>> dcmOfEuler321 $ Euler {eYaw = 0.0, ePitch = 0, eRoll = 0}
 -- V3 (V3 1.0 0.0 0.0) (V3 0.0 1.0 0.0) (V3 0.0 0.0 1.0)
 --
--- >>> dcmOfEuler321 $ Euler {eYaw = pi/2, ePitch = 0, eRoll = 0}
--- V3 (V3 2.220446049250313e-16 1.0 0.0) (V3 (-1.0) 2.220446049250313e-16 0.0) (V3 0.0 0.0 1.0)
+-- >>> fmap trunc $ dcmOfEuler321 $ Euler {eYaw = pi/2, ePitch = 0, eRoll = 0}
+-- V3 (V3 0.0 1.0 0.0) (V3 (-1.0) 0.0 0.0) (V3 0.0 0.0 1.0)
 --
 -- >>> dcmOfEuler321 $ Euler {eYaw = pi/4, ePitch = 0, eRoll = 0}
 -- V3 (V3 0.7071067811865475 0.7071067811865476 0.0) (V3 (-0.7071067811865476) 0.7071067811865475 0.0) (V3 0.0 0.0 1.0)
