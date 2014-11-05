@@ -1,29 +1,30 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# Language ScopedTypeVariables #-}
 
-module SpatialMath ( Euler(..)
-                   , rotateXyzAboutX
-                   , rotateXyzAboutY
-                   , rotateXyzAboutZ
-                   , euler321OfQuat
-                   , euler321OfDcm
-                   , quatOfEuler321
-                   , dcmOfQuat
-                   , dcmOfQuatB2A
-                   , dcmOfEuler321
-                   , quatOfDcm
-                   , quatOfDcmB2A
-                   , rotVecByDcm
-                   , rotVecByDcmB2A
-                   , rotVecByQuat
-                   , rotVecByQuatB2A
-                   , rotVecByEuler
-                   , rotVecByEulerB2A
-                     -- * re-exported from linear
-                   , M33
-                   , V3(..)
-                   , Quaternion(..)
-                   ) where
+module SpatialMath
+       ( Euler(..)
+       , rotateXyzAboutX
+       , rotateXyzAboutY
+       , rotateXyzAboutZ
+       , euler321OfQuat
+       , euler321OfDcm
+       , quatOfEuler321
+       , dcmOfQuat
+       , dcmOfQuatB2A
+       , dcmOfEuler321
+       , quatOfDcm
+       , quatOfDcmB2A
+       , rotVecByDcm
+       , rotVecByDcmB2A
+       , rotVecByQuat
+       , rotVecByQuatB2A
+       , rotVecByEuler
+       , rotVecByEulerB2A
+         -- * re-exported from linear
+       , M33
+       , V3(..)
+       , Quaternion(..)
+       ) where
 
 import Linear
 
