@@ -1,7 +1,6 @@
 # from https://github.com/hvr/multi-ghc-travis
 
 env:
- - GHCVER=7.4.2
  - GHCVER=7.6.3
  - GHCVER=7.8.3 # see note about Alex/Happy
 
@@ -20,7 +19,7 @@ install:
 script:
  - cabal configure --enable-tests --enable-benchmarks -v2  # -v2 provides useful information for debugging
  - cabal build   # this builds all libraries and executables (including tests/benchmarks)
- - if [ "$GHCVER" != "7.4.2" ] && [ "$GHCVER" != "7.6.3" ]; then cabal test; fi
+ - if [ "$GHCVER" != "7.6.3" ]; then cabal test; fi
  - cabal check
  - cabal sdist   # tests that a source-distribution can be generated
 
