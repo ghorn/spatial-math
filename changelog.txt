@@ -2,3 +2,6 @@
 - convert to using `linear` V3, M33, Quaternion types
 - doctests
 - fix long unknown bug: rotateXyzAbout{X,Y,Z} was rotating opposite direction from intended
+
+0.2.1.1
+- Serialize a => Serialize (Euler a)

@@ -16,6 +16,7 @@ import Data.Foldable ( Foldable )
 import Data.Traversable ( Traversable )
 #if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
 import GHC.Generics (Generic)
+import Data.Serialize ( Serialize )
 #endif
 #if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 706
 import GHC.Generics (Generic1)
@@ -47,3 +48,7 @@ deriving instance Typeable Euler
 deriving instance Typeable1 Euler
 #endif
 
+
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
+instance Serialize a => Serialize (Euler a)
+#endif
