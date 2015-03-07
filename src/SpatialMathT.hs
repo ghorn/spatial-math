@@ -19,6 +19,7 @@ module SpatialMathT
 
 import Control.Applicative ( Applicative )
 import Data.Foldable ( Foldable )
+import Data.Binary ( Binary(..) )
 import Data.Serialize ( Serialize(..) )
 import Data.Traversable ( Traversable )
 import Foreign.Storable ( Storable )
@@ -35,18 +36,8 @@ newtype V3T f a = V3T {unV :: V3 a}
                          , Additive, Storable
                          , Num, Fractional, Eq, Show
                          , Generic1, Generic
+                         , Serialize, Binary
                          )
-
-instance Serialize a => Serialize (V3T f a) where
-  get = do
-    x <- get
-    y <- get
-    z <- get
-    return (V3T (V3 x y z))
-  put (V3T (V3 x y z)) = do
-    put x
-    put y
-    put z
 
 cross :: Num a => V3T f a -> V3T f a -> V3T f a
 cross (V3T vx) (V3T vy) = V3T (vx `L.cross` vy)
@@ -55,8 +46,9 @@ newtype Rot f1 f2 r =
   Rot { unR :: r }
   deriving ( Functor, Foldable, Traversable
            , Storable
-           , Num, Fractional, Eq, Show, Serialize
+           , Num, Fractional, Eq, Show
            , Generic1, Generic
+           , Serialize, Binary
            )
 
 type M33T f1 f2 a = V3T f1 (V3T f2 a)

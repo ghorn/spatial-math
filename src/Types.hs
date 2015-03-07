@@ -17,6 +17,7 @@ import Data.Traversable ( Traversable )
 #if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
 import GHC.Generics ( Generic )
 import Data.Serialize ( Serialize )
+import Data.Binary ( Binary )
 #endif
 #if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 706
 import GHC.Generics ( Generic1 )
@@ -51,4 +52,5 @@ deriving instance Typeable1 Euler
 
 #if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
 instance Serialize a => Serialize (Euler a)
+instance Binary a => Binary (Euler a)
 #endif
