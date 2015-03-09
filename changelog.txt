@@ -5,3 +5,6 @@
 
 0.2.1.1
 - Serialize a => Serialize (Euler a)
+
+0.2.1.2
+- Binary a => Binary (Euler a)
