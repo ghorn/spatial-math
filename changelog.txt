@@ -8,3 +8,6 @@
 
 0.2.1.2
 - Binary a => Binary (Euler a)
+
+0.2.2
+- add Ord instances

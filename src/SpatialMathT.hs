@@ -34,7 +34,7 @@ newtype V3T f a = V3T {unV :: V3 a}
                 deriving ( Functor, Foldable, Traversable
                          , Applicative
                          , Additive, Storable
-                         , Num, Fractional, Eq, Show
+                         , Num, Fractional, Eq, Show, Ord
                          , Generic1, Generic
                          , Serialize, Binary
                          )
@@ -46,7 +46,7 @@ newtype Rot f1 f2 r =
   Rot { unR :: r }
   deriving ( Functor, Foldable, Traversable
            , Storable
-           , Num, Fractional, Eq, Show
+           , Num, Fractional, Eq, Show, Ord
            , Generic1, Generic
            , Serialize, Binary
            )
