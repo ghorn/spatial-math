@@ -33,7 +33,7 @@ import SpatialMath
 newtype V3T f a = V3T {unV :: V3 a}
                 deriving ( Functor, Foldable, Traversable
                          , Applicative
-                         , Additive, Storable
+                         , Additive, Metric, Storable
                          , Num, Fractional, Eq, Show, Ord
                          , Generic1, Generic
                          , Serialize, Binary
