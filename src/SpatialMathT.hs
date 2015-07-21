@@ -39,6 +39,20 @@ newtype V3T f a = V3T {unV :: V3 a}
                          , Serialize, Binary
                          )
 
+instance R1 (V3T f) where
+  _x f (V3T v) = fmap V3T $ _x f v
+  {-# INLINE _x #-}
+instance R2 (V3T f) where
+  _y f (V3T v) = fmap V3T $ _y f v
+  {-# INLINE _y #-}
+  _xy f (V3T v) = fmap V3T $ _xy f v
+  {-# INLINE _xy #-}
+instance R3 (V3T f) where
+  _z f (V3T v) = fmap V3T $ _z f v
+  {-# INLINE _z #-}
+  _xyz f (V3T v) = fmap V3T $ _xyz f v
+  {-# INLINE _xyz #-}
+
 cross :: Num a => V3T f a -> V3T f a -> V3T f a
 cross (V3T vx) (V3T vy) = V3T (vx `L.cross` vy)
 

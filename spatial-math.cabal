@@ -1,5 +1,5 @@
 name:                spatial-math
-version:             0.2.3.0
+version:             0.2.4.0
 synopsis:            3d math including quaternions/euler angles/dcms and utility functions
 description:         This is a port of my 'mathlib' C library: `https://github.com/ghorn/mathlib`
 license:             BSD3
@@ -23,7 +23,8 @@ library
                        ghc-prim,
                        cereal,
                        binary,
-                       linear >= 1.17.1
+                       linear >= 1.17.1,
+                       lens
   default-language:    Haskell2010
 
 source-repository head
