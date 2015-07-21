@@ -12,6 +12,7 @@ module SpatialMathT
        ( Rotation(..)
        , Rot(..)
        , V3T(..)
+       , R1(..), R2(..), R3(..)
        , M33T
        , cross
        , orthonormalize
