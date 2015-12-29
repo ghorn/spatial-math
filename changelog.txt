@@ -11,3 +11,7 @@
 
 0.2.2
 - add Ord instances
+
+0.2.5
+- instance Applicative Euler
+- specialized dcmOfEuler321 without Ord constraint
