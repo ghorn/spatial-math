@@ -11,6 +11,7 @@
 
 module Types ( Euler(..) ) where
 
+import Control.Applicative ( Applicative(..) )
 import Data.Data ( Data )
 import Data.Foldable ( Foldable )
 import Data.Traversable ( Traversable )
@@ -54,3 +55,7 @@ deriving instance Typeable1 Euler
 instance Serialize a => Serialize (Euler a)
 instance Binary a => Binary (Euler a)
 #endif
+
+instance Applicative Euler where
+  pure x = Euler x x x
+  Euler f0 f1 f2 <*> Euler x0 x1 x2 = Euler (f0 x0) (f1 x1) (f2 x2)
