@@ -21,7 +21,7 @@ import SpatialMath
 main :: IO ()
 main = defaultMainWithOpts tests opts
 
-close :: forall f . (Foldable f, Applicative f) => Double -> f Double -> f Double -> Bool
+close :: forall f . (F.Foldable f, Applicative f) => Double -> f Double -> f Double -> Bool
 close eps f0 f1 = all (\x -> abs x <= eps) deltas
   where
     delta :: f Double
@@ -75,7 +75,7 @@ instance Arbitrary (Quaternion Double) where
 instance Arbitrary (V3 (V3 Double)) where
   arbitrary = dcmOfEuler321 <$> arbitrary
 
-testConversion :: (Foldable f, Applicative f, Show (f Double))
+testConversion :: (F.Foldable f, Applicative f, Show (f Double))
                   => Double -> (f Double -> f Double) -> f Double
                   -> Property
 testConversion eps f x0 = counterexample msg (close eps x0 x1)
