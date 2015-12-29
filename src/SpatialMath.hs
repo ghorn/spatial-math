@@ -238,17 +238,30 @@ dcmOfQuat q = V3
 
 -- | Convert DCM to euler angles
 --
--- >>> dcmOfEuler321 $ Euler {eYaw = 0.0, ePitch = 0, eRoll = 0}
+-- >>> fmap trunc $ dcmOfEuler321 $ Euler {eYaw = 0.0, ePitch = 0, eRoll = 0}
 -- V3 (V3 1.0 0.0 0.0) (V3 0.0 1.0 0.0) (V3 0.0 0.0 1.0)
 --
 -- >>> fmap trunc $ dcmOfEuler321 $ Euler {eYaw = pi/2, ePitch = 0, eRoll = 0}
 -- V3 (V3 0.0 1.0 0.0) (V3 (-1.0) 0.0 0.0) (V3 0.0 0.0 1.0)
 --
--- >>> dcmOfEuler321 $ Euler {eYaw = pi/4, ePitch = 0, eRoll = 0}
--- V3 (V3 0.7071067811865475 0.7071067811865476 0.0) (V3 (-0.7071067811865476) 0.7071067811865475 0.0) (V3 0.0 0.0 1.0)
+-- >>> fmap trunc $ dcmOfEuler321 $ Euler {eYaw = pi/4, ePitch = 0, eRoll = 0}
+-- V3 (V3 0.7071067811865476 0.7071067811865475 0.0) (V3 (-0.7071067811865475) 0.7071067811865476 0.0) (V3 0.0 0.0 1.0)
 --
-dcmOfEuler321 :: (Floating a, Ord a) => Euler a -> M33 a
-dcmOfEuler321 = dcmOfQuat . quatOfEuler321
+dcmOfEuler321 :: Floating a => Euler a -> M33 a
+dcmOfEuler321 euler = dcm
+  where
+    cPs = cos (eYaw euler)
+    sPs = sin (eYaw euler)
+    cTh = cos (ePitch euler)
+    sTh = sin (ePitch euler)
+    cPh = cos (eRoll euler)
+    sPh = sin (eRoll euler)
+
+    dcm =
+      V3
+      (V3 (cTh*cPs) (cTh*sPs) (-sTh))
+      (V3 (cPs*sTh*sPh - cPh*sPs) ( cPh*cPs + sTh*sPh*sPs) (cTh*sPh))
+      (V3 (cPh*cPs*sTh + sPh*sPs) (-cPs*sPh + cPh*sTh*sPs) (cTh*cPh))
 
 dcmOfQuatB2A :: (Conjugate a, RealFloat a) => Quaternion a -> M33 a
 dcmOfQuatB2A = dcmOfQuat . conjugate
