@@ -50,7 +50,27 @@ instance Arbitrary (Euler Double) where
       }
 
 instance Arbitrary (Quaternion Double) where
-  arbitrary = quatOfEuler321 <$> arbitrary
+--  arbitrary = quatOfEuler321 <$> arbitrary
+  arbitrary = do
+    w <- arbitrary
+    x <- arbitrary
+    y <- arbitrary
+    z <- arbitrary
+    let norm = sqrt (w*w + x*x + y*y + z*z)
+        ret
+          | norm == 0 =
+              elements
+              [ Quaternion 1 (V3 0 0 0)
+              , Quaternion 0 (V3 1 0 0)
+              , Quaternion 0 (V3 0 1 0)
+              , Quaternion 0 (V3 0 0 1)
+              , Quaternion (-1) (V3 0 0 0)
+              , Quaternion 0 (V3 (-1) 0 0)
+              , Quaternion 0 (V3 0 (-1) 0)
+              , Quaternion 0 (V3 0 0 (-1))
+              ]
+          | otherwise = return $ Quaternion (w/norm) (V3 (x/norm) (y/norm) (z/norm))
+    ret
 
 instance Arbitrary (V3 (V3 Double)) where
   arbitrary = dcmOfEuler321 <$> arbitrary
