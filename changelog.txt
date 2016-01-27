@@ -15,3 +15,8 @@
 0.2.5
 - instance Applicative Euler
 - specialized dcmOfEuler321 without Ord constraint
+
+0.2.6
+- use ArcTan2 instead of RealFloat
+- unsafe specialized euler321OrDcm without Ord constraint
+- primitive implementation of quatOfDcm

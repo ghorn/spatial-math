@@ -3,6 +3,7 @@
 
 module SpatialMath
        ( Euler(..)
+       , ArcTan2(..)
        , rotateXyzAboutX
        , rotateXyzAboutY
        , rotateXyzAboutZ
@@ -30,6 +31,12 @@ module SpatialMath
 import Linear
 
 import Types
+
+-- | doesn't require RealFloat, used for overloading symbolics
+class Floating a => ArcTan2 a where
+  arctan2 :: a -> a -> a
+instance ArcTan2 Double where arctan2 = atan2
+instance ArcTan2 Float where arctan2 = atan2
 
 -- $setup
 -- |
@@ -119,7 +126,7 @@ rotateXyzAboutZ (V3 ax ay az) rotAngle = V3 bx by bz
 -- >>> euler321OfQuat (Quaternion (sqrt(2)/2) (V3 0.0 0.0 (sqrt(2)/2)))
 -- Euler {eYaw = 1.5707963267948966, ePitch = -0.0, eRoll = 0.0}
 --
-euler321OfQuat :: RealFloat a => Quaternion a -> Euler a
+euler321OfQuat :: (ArcTan2 a, Ord a) => Quaternion a -> Euler a
 euler321OfQuat (Quaternion q0 (V3 q1 q2 q3)) = Euler yaw pitch roll
   where
     r11 = q0*q0 + q1*q1 - q2*q2 - q3*q3
@@ -132,9 +139,9 @@ euler321OfQuat (Quaternion q0 (V3 q1 q2 q3)) = Euler yaw pitch roll
     r23 = 2.0*(q2*q3 + q0*q1)
     r33 = q0*q0 - q1*q1 - q2*q2 + q3*q3
 
-    yaw   = atan2 r12 r11
+    yaw   = arctan2 r12 r11
     pitch = asin mr13
-    roll  = atan2 r23 r33
+    roll  = arctan2 r23 r33
 
 -- | convert a DCM to a quaternion
 --
