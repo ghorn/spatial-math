@@ -8,6 +8,7 @@ module SpatialMath
        , rotateXyzAboutZ
        , euler321OfQuat
        , euler321OfDcm
+       , unsafeEuler321OfDcm
        , quatOfEuler321
        , dcmOfQuat
        , dcmOfQuatB2A
@@ -188,6 +189,31 @@ euler321OfDcm
 
     yaw   = atan2 r12 r11
     pitch = asin mr13
+    roll  = atan2 r23 r33
+
+-- | Convert DCM to euler angles. Returns Nan if r[1,3] is outside (-1, 1).
+--
+-- >>> unsafeEuler321OfDcm $ V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
+-- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 0.0}
+--
+-- >>> unsafeEuler321OfDcm $ V3 (V3 0 1 0) (V3 (-1) 0 0) (V3 0 0 1)
+-- Euler {eYaw = 1.5707963267948966, ePitch = -0.0, eRoll = 0.0}
+--
+-- >>> let s = sqrt(2)/2 in unsafeEuler321OfDcm $ V3 (V3 s s 0) (V3 (-s) s 0) (V3 0 0 1)
+-- Euler {eYaw = 0.7853981633974483, ePitch = -0.0, eRoll = 0.0}
+--
+-- >>> unsafeEuler321OfDcm $ V3 (V3 0 0 1.1) (V3 0 0 0) (V3 0 0 0)
+-- Euler {eYaw = 0.0, ePitch = NaN, eRoll = 0.0}
+--
+unsafeEuler321OfDcm :: RealFloat a => M33 a -> Euler a
+unsafeEuler321OfDcm
+  (V3
+   (V3 r11 r12 r13)
+   (V3   _   _ r23)
+   (V3   _   _ r33)) = Euler yaw pitch roll
+  where
+    yaw   = atan2 r12 r11
+    pitch = asin (-r13)
     roll  = atan2 r23 r33
 
 -- | Convert Euler angles to quaternion
