@@ -167,8 +167,8 @@ quatOfDcm
     fourQ0 = 4 * q0
 
 
-quatOfDcmB2A :: (Conjugate a, RealFloat a) => M33 a -> Quaternion a
-quatOfDcmB2A = conjugate . quatOfDcm
+quatOfDcmB2A :: Floating a => M33 a -> Quaternion a
+quatOfDcmB2A = quatConjugate . quatOfDcm
 
 -- | Convert DCM to euler angles
 --
@@ -181,7 +181,7 @@ quatOfDcmB2A = conjugate . quatOfDcm
 -- >>> let s = sqrt(2)/2 in euler321OfDcm $ V3 (V3 s s 0) (V3 (-s) s 0) (V3 0 0 1)
 -- Euler {eYaw = 0.7853981633974483, ePitch = -0.0, eRoll = 0.0}
 --
-euler321OfDcm :: RealFloat a => M33 a -> Euler a
+euler321OfDcm :: (Ord a, ArcTan2 a) => M33 a -> Euler a
 euler321OfDcm
   (V3
    (V3 r11 r12 r13)
@@ -194,9 +194,9 @@ euler321OfDcm
       | mr13' < -1 = -1
       | otherwise = mr13'
 
-    yaw   = atan2 r12 r11
+    yaw   = arctan2 r12 r11
     pitch = asin mr13
-    roll  = atan2 r23 r33
+    roll  = arctan2 r23 r33
 
 -- | Convert DCM to euler angles. Returns Nan if r[1,3] is outside (-1, 1).
 --
@@ -212,16 +212,16 @@ euler321OfDcm
 -- >>> unsafeEuler321OfDcm $ V3 (V3 0 0 1.1) (V3 0 0 0) (V3 0 0 0)
 -- Euler {eYaw = 0.0, ePitch = NaN, eRoll = 0.0}
 --
-unsafeEuler321OfDcm :: RealFloat a => M33 a -> Euler a
+unsafeEuler321OfDcm :: ArcTan2 a => M33 a -> Euler a
 unsafeEuler321OfDcm
   (V3
    (V3 r11 r12 r13)
    (V3   _   _ r23)
    (V3   _   _ r33)) = Euler yaw pitch roll
   where
-    yaw   = atan2 r12 r11
+    yaw   = arctan2 r12 r11
     pitch = asin (-r13)
-    roll  = atan2 r23 r33
+    roll  = arctan2 r23 r33
 
 -- | Convert Euler angles to quaternion
 --
@@ -306,8 +306,11 @@ dcmOfEuler321 euler = dcm
       (V3 (cPs*sTh*sPh - cPh*sPs) ( cPh*cPs + sTh*sPh*sPs) (cTh*sPh))
       (V3 (cPh*cPs*sTh + sPh*sPs) (-cPs*sPh + cPh*sTh*sPs) (cTh*cPh))
 
-dcmOfQuatB2A :: (Conjugate a, RealFloat a) => Quaternion a -> M33 a
-dcmOfQuatB2A = dcmOfQuat . conjugate
+quatConjugate :: Num a => Quaternion a -> Quaternion a
+quatConjugate (Quaternion q0 qv) = Quaternion q0 (fmap negate qv)
+
+dcmOfQuatB2A :: Num a => Quaternion a -> M33 a
+dcmOfQuatB2A = dcmOfQuat . quatConjugate
 
 -- | vec_b = R_a2b * vec_a
 rotVecByDcm :: Num a => M33 a -> V3 a -> V3 a
