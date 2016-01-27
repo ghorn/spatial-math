@@ -138,16 +138,26 @@ euler321OfQuat (Quaternion q0 (V3 q1 q2 q3)) = Euler yaw pitch roll
 -- | convert a DCM to a quaternion
 --
 -- >>> quatOfDcm $ V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
--- Quaternion 1.0 (V3 0.0 0.0 0.0)
+-- Quaternion 1.0 (V3 (-0.0) (-0.0) (-0.0))
 --
 -- >>> quatOfDcm $ V3 (V3 0 1 0) (V3 (-1) 0 0) (V3 0 0 1)
--- Quaternion 0.7071067811865476 (V3 0.0 0.0 0.7071067811865475)
+-- Quaternion 0.7071067811865477 (V3 (-0.0) (-0.0) 0.7071067811865474)
 --
 -- >>> let s = sqrt(2)/2 in quatOfDcm $ V3 (V3 s s 0) (V3 (-s) s 0) (V3 0 0 1)
--- Quaternion 0.9238795325112867 (V3 0.0 0.0 0.3826834323650898)
---
-quatOfDcm :: RealFloat a => M33 a -> Quaternion a
-quatOfDcm = quatOfEuler321 . euler321OfDcm
+-- Quaternion 0.9238795325112868 (V3 (-0.0) (-0.0) 0.3826834323650898)
+quatOfDcm :: Floating a => M33 a -> Quaternion a
+quatOfDcm
+  (V3
+   (V3 r11 r12 r13)
+   (V3 r21 r22 r23)
+   (V3 r31 r32 r33)) = Quaternion q0 (V3 qi qj qk)
+  where
+    q0 = 0.5 * sqrt (1e-15 + (1 + r11 + r22 + r33))
+    qi = negate (r32 - r23) / fourQ0
+    qj = negate (r13 - r31) / fourQ0
+    qk = negate (r21 - r12) / fourQ0
+    fourQ0 = 4 * q0
+
 
 quatOfDcmB2A :: (Conjugate a, RealFloat a) => M33 a -> Quaternion a
 quatOfDcmB2A = conjugate . quatOfDcm

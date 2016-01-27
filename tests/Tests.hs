@@ -15,22 +15,27 @@ import Test.Framework.Providers.QuickCheck2 ( testProperty )
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary
 -- import Test.QuickCheck.Gen
+import Text.Printf ( printf )
 
 import SpatialMath
 
 main :: IO ()
 main = defaultMainWithOpts tests opts
 
-close :: forall f . (F.Foldable f, Applicative f) => Double -> f Double -> f Double -> Bool
-close eps f0 f1 = all (\x -> abs x <= eps) deltas
+close :: forall f . (F.Foldable f, Applicative f) => Double -> f Double -> f Double -> Maybe Double
+close eps f0 f1
+  | all (\x -> abs x <= eps) deltas = Nothing
+  | otherwise = Just $ maximum $ map abs deltas
   where
     delta :: f Double
     delta = (-) <$> f0 <*> f1
 
     deltas = F.toList delta
 
-closeDcm :: Double -> M33 Double -> M33 Double -> Bool
-closeDcm eps f0 f1 = all (\x -> abs x <= eps) deltas
+closeDcm :: Double -> M33 Double -> M33 Double -> Maybe Double
+closeDcm eps f0 f1
+  | all (\x -> abs x <= eps) deltas = Nothing
+  | otherwise = Just $ maximum $ map abs deltas
   where
     delta :: V3 (V3 Double)
     delta = (-) <$> f0 <*> f1
@@ -78,12 +83,15 @@ instance Arbitrary (V3 (V3 Double)) where
 testConversion :: (F.Foldable f, Applicative f, Show (f Double))
                   => Double -> (f Double -> f Double) -> f Double
                   -> Property
-testConversion eps f x0 = counterexample msg (close eps x0 x1)
+testConversion eps f x0 = counterexample msg ret
   where
-    msg = init $ unlines
+    (ret, errmsg) = case close eps x0 x1 of
+      Nothing -> (True, [])
+      Just worstErr -> (False, [printf "worst error: %.3g" worstErr])
+    msg = init $ unlines $
           [ "original:  " ++ show x0
           , "converted: " ++ show x1
-          ]
+          ] ++ errmsg
     x1 = f x0
 
 prop_e2q2e :: Euler Double -> Property
@@ -92,14 +100,17 @@ prop_e2q2e = testConversion 1e-9 (euler321OfQuat . quatOfEuler321)
 prop_e2d2e :: Euler Double -> Property
 prop_e2d2e = testConversion 1e-9 (euler321OfDcm . dcmOfEuler321)
 
-testDoubleConversion :: (Show f, Show g) => f -> g -> g -> Bool -> Property
-testDoubleConversion orig res0 res1 ret = counterexample msg ret
+testDoubleConversion :: (Show f, Show g) => f -> g -> g -> Maybe Double -> Property
+testDoubleConversion orig res0 res1 err = counterexample msg ret
   where
-    msg = init $ unlines
+    (ret, errmsg) = case err of
+      Nothing -> (True, [])
+      Just worstErr -> (False, [printf "worst error: %.3g" worstErr])
+    msg = init $ unlines $
           [ "original: " ++ show orig
           , "first route:  " ++ show res0
           , "second route: " ++ show res1
-          ]
+          ] ++ errmsg
 
 prop_e2d_e2q2d :: Euler Double -> Property
 prop_e2d_e2q2d euler = testDoubleConversion euler dcm0 dcm1 (closeDcm 1e-9 dcm0 dcm1)
@@ -126,13 +137,13 @@ prop_q2d_q2e2d quat = testDoubleConversion quat dcm0 dcm1 (closeDcm 1e-9 dcm0 dc
     dcm1 = dcmOfEuler321 (euler321OfQuat quat)
 
 prop_d2e_d2q2e :: M33 Double -> Property
-prop_d2e_d2q2e dcm = testDoubleConversion dcm euler0 euler1 (close 1e-9 euler0 euler1)
+prop_d2e_d2q2e dcm = testDoubleConversion dcm euler0 euler1 (close 1e-7 euler0 euler1)
   where
     euler0 = euler321OfDcm dcm
     euler1 = euler321OfQuat (quatOfDcm dcm)
 
 prop_d2q_d2e2q :: M33 Double -> Property
-prop_d2q_d2e2q dcm = testDoubleConversion dcm quat0 quat1 (close 1e-9 quat0 quat1)
+prop_d2q_d2e2q dcm = testDoubleConversion dcm quat0 quat1 (close 1e-6 quat0 quat1)
   where
     quat0 = quatOfDcm dcm
     quat1 = quatOfEuler321 (euler321OfDcm dcm)
