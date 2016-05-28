@@ -8,6 +8,7 @@ module SpatialMath
        , rotateXyzAboutY
        , rotateXyzAboutZ
        , euler321OfQuat
+       , unsafeEuler321OfQuat
        , euler321OfDcm
        , unsafeEuler321OfDcm
        , quatOfEuler321
@@ -143,6 +144,33 @@ euler321OfQuat (Quaternion q0 (V3 q1 q2 q3)) = Euler yaw pitch roll
     pitch = asin mr13
     roll  = arctan2 r23 r33
 
+-- | Convert quaternion to Euler angles. Returns Nan if 2.0*(q1*q3 - q0*q2) is outside [-1, 1].
+--
+-- >>> unsafeEuler321OfQuat (Quaternion 1.0 (V3 0.0 0.0 0.0))
+-- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 0.0}
+--
+-- >>> unsafeEuler321OfQuat (Quaternion (sqrt(2)/2) (V3 (sqrt(2)/2) 0.0 0.0))
+-- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 1.5707963267948966}
+--
+-- >>> unsafeEuler321OfQuat (Quaternion (sqrt(2)/2) (V3 0.0 (sqrt(2)/2) 0.0))
+-- Euler {eYaw = 0.0, ePitch = NaN, eRoll = 0.0}
+--
+-- >>> unsafeEuler321OfQuat (Quaternion (sqrt(2)/2) (V3 0.0 0.0 (sqrt(2)/2)))
+-- Euler {eYaw = 1.5707963267948966, ePitch = -0.0, eRoll = 0.0}
+--
+unsafeEuler321OfQuat :: ArcTan2 a => Quaternion a -> Euler a
+unsafeEuler321OfQuat (Quaternion q0 (V3 q1 q2 q3)) = Euler yaw pitch roll
+  where
+    r11 = q0*q0 + q1*q1 - q2*q2 - q3*q3
+    r12 = 2.0*(q1*q2 + q0*q3)
+    mr13 = -2.0*(q1*q3 - q0*q2)
+    r23 = 2.0*(q2*q3 + q0*q1)
+    r33 = q0*q0 - q1*q1 - q2*q2 + q3*q3
+
+    yaw   = arctan2 r12 r11
+    pitch = asin mr13
+    roll  = arctan2 r23 r33
+
 -- | convert a DCM to a quaternion
 --
 -- >>> quatOfDcm $ V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
@@ -198,7 +226,7 @@ euler321OfDcm
     pitch = asin mr13
     roll  = arctan2 r23 r33
 
--- | Convert DCM to euler angles. Returns Nan if r[1,3] is outside (-1, 1).
+-- | Convert DCM to euler angles. Returns Nan if r[1,3] is outside [-1, 1].
 --
 -- >>> unsafeEuler321OfDcm $ V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
 -- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 0.0}
@@ -223,7 +251,7 @@ unsafeEuler321OfDcm
     pitch = asin (-r13)
     roll  = arctan2 r23 r33
 
--- | Convert Euler angles to quaternion
+-- | Convert Euler angles to quaternion. The scalar part of the result may be positive or negative.
 --
 -- >>> quatOfEuler321 (Euler 0 0 0)
 -- Quaternion 1.0 (V3 0.0 0.0 0.0)
@@ -237,7 +265,7 @@ unsafeEuler321OfDcm
 -- >>> quatOfEuler321 (Euler 0 0 (pi/2))
 -- Quaternion 0.7071067811865476 (V3 0.7071067811865475 0.0 0.0)
 --
-quatOfEuler321 :: (Floating a, Ord a) => Euler a -> Quaternion a
+quatOfEuler321 :: Floating a => Euler a -> Quaternion a
 quatOfEuler321 (Euler yaw pitch roll) = normalize' q
   where
     sr2 = sin $ 0.5*roll
@@ -251,11 +279,8 @@ quatOfEuler321 (Euler yaw pitch roll) = normalize' q
     q2 = cr2*sp2*cy2 + sr2*cp2*sy2
     q3 = cr2*cp2*sy2 - sr2*sp2*cy2
 
-    q' = Quaternion q0 (V3 q1 q2 q3)
+    q = Quaternion q0 (V3 q1 q2 q3)
 
-    q
-      | q0 < 0 = Quaternion (-q0) (V3 (-q1) (-q2) (-q3))
-      | otherwise = q'
 
 -- | convert a quaternion to a DCM
 --

@@ -7,18 +7,29 @@
 {-# Language DeriveFoldable #-}
 {-# Language DeriveTraversable #-}
 {-# Language DeriveGeneric #-}
+{-# Language TypeOperators #-}
 
 module SpatialMathT
-       ( Rotation(..)
+       ( ArcTan2(..)
+       , Rotation(..)
        , Rot(..)
        , V3T(..)
        , R1(..), R2(..), R3(..)
-       , M33T
        , cross
        , orthonormalize
+       , dcmOfQuat
+       , dcmOfEuler321
+       , quatOfDcm
+       , quatOfEuler321
+       , euler321OfDcm
+       , euler321OfQuat
+       , unsafeEuler321OfQuat
+         -- * re-export for convenience
+       , (:.)(..), unO
        ) where
 
 import Control.Applicative ( Applicative )
+import Control.Compose ( (:.)(..), unO )
 import Data.Foldable ( Foldable )
 import Data.Binary ( Binary(..) )
 import Data.Serialize ( Serialize(..) )
@@ -26,10 +37,11 @@ import Data.Traversable ( Traversable )
 import Foreign.Storable ( Storable )
 import GHC.Generics ( Generic, Generic1 )
 
-import Linear hiding ( cross )
+import Linear hiding ( cross, normalize, transpose )
 import qualified Linear as L
 
-import SpatialMath
+import SpatialMath ( ArcTan2(..), Euler(..) )
+import qualified SpatialMath as SM
 
 newtype V3T f a = V3T {unV :: V3 a}
                 deriving ( Functor, Foldable, Traversable
@@ -58,7 +70,7 @@ cross :: Num a => V3T f a -> V3T f a -> V3T f a
 cross (V3T vx) (V3T vy) = V3T (vx `L.cross` vy)
 
 newtype Rot f1 f2 r =
-  Rot { unR :: r }
+  Rot { unRot :: r }
   deriving ( Functor, Foldable, Traversable
            , Storable
            , Num, Fractional, Eq, Show, Ord
@@ -66,49 +78,96 @@ newtype Rot f1 f2 r =
            , Serialize, Binary
            )
 
-type M33T f1 f2 a = V3T f1 (V3T f2 a)
+class Rotation g a where
+  compose :: Rot f1 f2 (g a) -> Rot f2 f3 (g a) -> Rot f1 f3 (g a)
+  rot  :: Rot f1 f2 (g a) -> V3T f1 a -> V3T f2 a
+  rot' :: Rot f1 f2 (g a) -> V3T f2 a -> V3T f1 a
+  transpose :: Rot f1 f2 (g a) -> Rot f2 f1 (g a)
+  identity :: Rot f1 f2 (g a)
 
-class Rotation p a | p -> a where
-  compose :: Rot f1 f2 p -> Rot f2 f3 p -> Rot f1 f3 p
-  rot  :: Rot f1 f2 p -> V3T f1 a -> V3T f2 a
-  rot' :: Rot f1 f2 p -> V3T f2 a -> V3T f1 a
-  toDcm   :: Rot f1 f2 p -> Rot f1 f2 (M33 a)
---  fromDcm :: Rot f1 f2 (M33 a) -> Rot f1 f2 (p a)
-  transpose :: Rot f1 f2 p -> Rot f2 f1 p
-
-instance Num a => Rotation (Quaternion a) a where
+instance Num a => Rotation Quaternion a where
   compose (Rot q_a2b) (Rot q_b2c) = Rot (q_a2b `quatMult` q_b2c)
-  rot  (Rot q_a2b) (V3T va) = V3T (rotVecByQuat    q_a2b va)
-  rot' (Rot q_a2b) (V3T vb) = V3T (rotVecByQuatB2A q_a2b vb)
-  toDcm (Rot q_a2b) = Rot (dcmOfQuat q_a2b)
---  fromDcm (Rot dcm_a2b) = Rot (quatOfDcm dcm_a2b)
+    where
+      -- quaternion multiplication which doesn't require RealFrac
+      quatMult :: Num a => Quaternion a -> Quaternion a -> Quaternion a
+      quatMult (Quaternion s1 v1) (Quaternion s2 v2) =
+        Quaternion (s1*s2 - (v1 `dot` v2)) $
+        (v1 `L.cross` v2) + s1*^v2 + s2*^v1
+
+  rot  (Rot q_a2b) (V3T va) = V3T (SM.rotVecByQuat    q_a2b va)
+  rot' (Rot q_a2b) (V3T vb) = V3T (SM.rotVecByQuatB2A q_a2b vb)
   transpose (Rot (Quaternion q0 qxyz)) = Rot (Quaternion q0 (fmap negate qxyz))
+  identity = Rot (Quaternion 1 (pure 0))
 
--- quaternion multiplication which doesn't require RealFrac
-quatMult :: Num a => Quaternion a -> Quaternion a -> Quaternion a
-quatMult (Quaternion s1 v1) (Quaternion s2 v2) =
-  Quaternion (s1*s2 - (v1 `dot` v2)) $
-  (v1 `L.cross` v2) + s1*^v2 + s2*^v1
+instance Num a => Rotation (V3 :. V3) a where
+  compose (Rot (O dcm_a2b)) (Rot (O dcm_b2c)) = Rot $ O (dcm_b2c !*! dcm_a2b)
+  rot  (Rot (O dcm_a2b)) (V3T va) = V3T (SM.rotVecByDcm    dcm_a2b va)
+  rot' (Rot (O dcm_a2b)) (V3T vb) = V3T (SM.rotVecByDcmB2A dcm_a2b vb)
+  transpose
+    (Rot
+     (O
+      (V3
+       (V3 e11 e12 e13)
+       (V3 e21 e22 e23)
+       (V3 e31 e32 e33)))) =
+    Rot $ O $
+    V3
+    (V3 e11 e21 e31)
+    (V3 e12 e22 e32)
+    (V3 e13 e23 e33)
+  identity =
+    Rot $ O $
+    V3
+    (V3 1 0 0)
+    (V3 0 1 0)
+    (V3 0 0 1)
 
-instance Num a => Rotation (M33 a) a where
-  compose (Rot dcm_a2b) (Rot dcm_b2c) = Rot (dcm_b2c !*! dcm_a2b)
-  rot  (Rot dcm_a2b) (V3T va) = V3T (rotVecByDcm    dcm_a2b va)
-  rot' (Rot dcm_a2b) (V3T vb) = V3T (rotVecByDcmB2A dcm_a2b vb)
-  toDcm = id
-  transpose (Rot (V3
-                  (V3 e11 e12 e13)
-                  (V3 e21 e22 e23)
-                  (V3 e31 e32 e33))) =
-    Rot (V3
-         (V3 e11 e21 e31)
-         (V3 e12 e22 e32)
-         (V3 e13 e23 e33))
 
-orthonormalize :: Floating a => Rot f1 f2 (M33 a) -> Rot f1 f2 (M33 a)
-orthonormalize (Rot (V3
-                     (V3 m00 m01 m02)
-                     (V3 m10 m11 m12)
-                     (V3 m20 m21 m22))) = Rot ret
+dcmOfQuat :: Num a => Rot f g (Quaternion a) -> Rot f g ((V3 :. V3) a)
+dcmOfQuat = Rot . O . SM.dcmOfQuat . unRot
+
+dcmOfEuler321 :: Floating a => Rot f g (Euler a) -> Rot f g ((V3 :. V3) a)
+dcmOfEuler321 = Rot . O . SM.dcmOfEuler321 . unRot
+
+
+quatOfDcm :: Floating a => Rot f g ((:.) V3 V3 a) -> Rot f g (Quaternion a)
+quatOfDcm = Rot . SM.quatOfDcm . unO . unRot
+
+quatOfEuler321 :: Floating a => Rot f g (Euler a) -> Rot f g (Quaternion a)
+quatOfEuler321 = Rot . SM.quatOfEuler321 . unRot
+
+
+euler321OfDcm :: (ArcTan2 a, Ord a) => Rot f g ((V3 :. V3) a) -> Rot f g (Euler a)
+euler321OfDcm = Rot . SM.euler321OfDcm . unO . unRot
+
+euler321OfQuat :: (ArcTan2 a, Ord a) => Rot f g (Quaternion a) -> Rot f g (Euler a)
+euler321OfQuat = Rot . SM.euler321OfQuat . unRot
+
+unsafeEuler321OfQuat :: ArcTan2 a => Rot f g (Quaternion a) -> Rot f g (Euler a)
+unsafeEuler321OfQuat = Rot . SM.unsafeEuler321OfQuat . unRot
+
+instance (ArcTan2 a, Floating a, Ord a) => Rotation Euler a where
+  -- defined in terms of quaternion composition
+  compose e_a2b e_b2c = euler321OfQuat q_a2c
+    where
+      q_a2b = quatOfEuler321 e_a2b
+      q_b2c = quatOfEuler321 e_b2c
+      q_a2c = compose q_a2b q_b2c
+
+  rot  (Rot e_a2b) (V3T va) = V3T (SM.rotVecByEuler e_a2b va)
+  rot' (Rot e_a2b) (V3T vb) = V3T (SM.rotVecByEulerB2A e_a2b vb)
+  transpose = euler321OfQuat . transpose . quatOfEuler321
+  identity = Rot (Euler 0 0 0)
+
+
+orthonormalize :: Floating a => Rot f1 f2 ((V3 :. V3) a) -> Rot f1 f2 ((V3 :. V3) a)
+orthonormalize
+  (Rot
+   (O
+    (V3
+     (V3 m00 m01 m02)
+     (V3 m10 m11 m12)
+     (V3 m20 m21 m22)))) = Rot (O ret)
   where
     -- compute q0
     fInvLength0 = 1.0/sqrt(m00*m00 + m10*m10 + m20*m20)

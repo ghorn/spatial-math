@@ -121,7 +121,7 @@ prop_e2d_e2q2d euler = testDoubleConversion euler dcm0 dcm1 (closeDcm 1e-9 dcm0 
 prop_e2q_e2d2q :: Euler Double -> Property
 prop_e2q_e2d2q euler = testDoubleConversion euler quat0 quat1 (close 1e-9 quat0 quat1)
   where
-    quat0 = quatOfEuler321 euler
+    quat0 = makeScalarPositive (quatOfEuler321 euler)
     quat1 = quatOfDcm (dcmOfEuler321 euler)
 
 prop_q2e_q2d2e :: Quaternion Double -> Property
@@ -143,10 +143,15 @@ prop_d2e_d2q2e dcm = testDoubleConversion dcm euler0 euler1 (close 1e-7 euler0 e
     euler1 = euler321OfQuat (quatOfDcm dcm)
 
 prop_d2q_d2e2q :: M33 Double -> Property
-prop_d2q_d2e2q dcm = testDoubleConversion dcm quat0 quat1 (close 1e-6 quat0 quat1)
+prop_d2q_d2e2q dcm = testDoubleConversion dcm quat0 quat1 (close 1e-5 quat0 quat1)
   where
     quat0 = quatOfDcm dcm
-    quat1 = quatOfEuler321 (euler321OfDcm dcm)
+    quat1 = makeScalarPositive (quatOfEuler321 (euler321OfDcm dcm))
+
+makeScalarPositive :: Quaternion Double -> Quaternion Double
+makeScalarPositive quat0'@(Quaternion q0 _)
+  | q0 < 0 = fmap negate quat0'
+  | otherwise = quat0'
 
 tests :: [Test]
 tests =
