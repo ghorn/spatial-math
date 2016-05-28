@@ -69,8 +69,8 @@ instance R3 (V3T f) where
 cross :: Num a => V3T f a -> V3T f a -> V3T f a
 cross (V3T vx) (V3T vy) = V3T (vx `L.cross` vy)
 
-newtype Rot f1 f2 r =
-  Rot { unRot :: r }
+newtype Rot f1 f2 r a =
+  Rot { unRot :: r a }
   deriving ( Functor, Foldable, Traversable
            , Storable
            , Num, Fractional, Eq, Show, Ord
@@ -79,11 +79,11 @@ newtype Rot f1 f2 r =
            )
 
 class Rotation g a where
-  compose :: Rot f1 f2 (g a) -> Rot f2 f3 (g a) -> Rot f1 f3 (g a)
-  rot  :: Rot f1 f2 (g a) -> V3T f1 a -> V3T f2 a
-  rot' :: Rot f1 f2 (g a) -> V3T f2 a -> V3T f1 a
-  transpose :: Rot f1 f2 (g a) -> Rot f2 f1 (g a)
-  identity :: Rot f1 f2 (g a)
+  compose :: Rot f1 f2 g a -> Rot f2 f3 g a -> Rot f1 f3 g a
+  rot  :: Rot f1 f2 g a -> V3T f1 a -> V3T f2 a
+  rot' :: Rot f1 f2 g a -> V3T f2 a -> V3T f1 a
+  transpose :: Rot f1 f2 g a -> Rot f2 f1 g a
+  identity :: Rot f1 f2 g a
 
 instance Num a => Rotation Quaternion a where
   compose (Rot q_a2b) (Rot q_b2c) = Rot (q_a2b `quatMult` q_b2c)
@@ -123,27 +123,27 @@ instance Num a => Rotation (V3 :. V3) a where
     (V3 0 0 1)
 
 
-dcmOfQuat :: Num a => Rot f g (Quaternion a) -> Rot f g ((V3 :. V3) a)
+dcmOfQuat :: Num a => Rot f g Quaternion a -> Rot f g (V3 :. V3) a
 dcmOfQuat = Rot . O . SM.dcmOfQuat . unRot
 
-dcmOfEuler321 :: Floating a => Rot f g (Euler a) -> Rot f g ((V3 :. V3) a)
+dcmOfEuler321 :: Floating a => Rot f g Euler a -> Rot f g (V3 :. V3) a
 dcmOfEuler321 = Rot . O . SM.dcmOfEuler321 . unRot
 
 
-quatOfDcm :: Floating a => Rot f g ((:.) V3 V3 a) -> Rot f g (Quaternion a)
+quatOfDcm :: Floating a => Rot f g (V3 :. V3) a -> Rot f g Quaternion a
 quatOfDcm = Rot . SM.quatOfDcm . unO . unRot
 
-quatOfEuler321 :: Floating a => Rot f g (Euler a) -> Rot f g (Quaternion a)
+quatOfEuler321 :: Floating a => Rot f g Euler a -> Rot f g Quaternion a
 quatOfEuler321 = Rot . SM.quatOfEuler321 . unRot
 
 
-euler321OfDcm :: (ArcTan2 a, Ord a) => Rot f g ((V3 :. V3) a) -> Rot f g (Euler a)
+euler321OfDcm :: (ArcTan2 a, Ord a) => Rot f g (V3 :. V3) a -> Rot f g Euler a
 euler321OfDcm = Rot . SM.euler321OfDcm . unO . unRot
 
-euler321OfQuat :: (ArcTan2 a, Ord a) => Rot f g (Quaternion a) -> Rot f g (Euler a)
+euler321OfQuat :: (ArcTan2 a, Ord a) => Rot f g Quaternion a -> Rot f g Euler a
 euler321OfQuat = Rot . SM.euler321OfQuat . unRot
 
-unsafeEuler321OfQuat :: ArcTan2 a => Rot f g (Quaternion a) -> Rot f g (Euler a)
+unsafeEuler321OfQuat :: ArcTan2 a => Rot f g Quaternion a -> Rot f g Euler a
 unsafeEuler321OfQuat = Rot . SM.unsafeEuler321OfQuat . unRot
 
 instance (ArcTan2 a, Floating a, Ord a) => Rotation Euler a where
@@ -160,7 +160,7 @@ instance (ArcTan2 a, Floating a, Ord a) => Rotation Euler a where
   identity = Rot (Euler 0 0 0)
 
 
-orthonormalize :: Floating a => Rot f1 f2 ((V3 :. V3) a) -> Rot f1 f2 ((V3 :. V3) a)
+orthonormalize :: Floating a => Rot f1 f2 (V3 :. V3) a -> Rot f1 f2 (V3 :. V3) a
 orthonormalize
   (Rot
    (O
