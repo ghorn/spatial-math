@@ -24,6 +24,7 @@ module SpatialMathT
        , quatOfDcm
        , quatOfEuler321
        , euler321OfDcm
+       , unsafeEuler321OfDcm
        , euler321OfQuat
        , unsafeEuler321OfQuat
          -- * re-export for convenience
@@ -138,6 +139,9 @@ quatOfDcm = Rot . SM.quatOfDcm . unO . unRot
 quatOfEuler321 :: Floating a => Rot f g Euler a -> Rot f g Quaternion a
 quatOfEuler321 = Rot . SM.quatOfEuler321 . unRot
 
+
+unsafeEuler321OfDcm :: ArcTan2 a => Rot f g (V3 :. V3) a -> Rot f g Euler a
+unsafeEuler321OfDcm = Rot . SM.unsafeEuler321OfDcm . unO . unRot
 
 euler321OfDcm :: (ArcTan2 a, Ord a) => Rot f g (V3 :. V3) a -> Rot f g Euler a
 euler321OfDcm = Rot . SM.euler321OfDcm . unO . unRot
