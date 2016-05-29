@@ -12,6 +12,7 @@
 module SpatialMathT
        ( ArcTan2(..)
        , Euler(..)
+       , Quaternion(..), V3(..)
        , Rotation(..)
        , Rot(..)
        , V3T(..)
