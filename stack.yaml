@@ -1,0 +1,13 @@
+# For more information, see: https://github.com/commercialhaskell/stack/blob/release/doc/yaml_configuration.md
+
+resolver: lts-6.1
+
+compiler-check: newer-minor
+
+# Local packages, usually specified by relative directory name
+packages:
+- .
+
+# Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
+extra-deps: [ TypeCompose-0.9.11
+            ]
