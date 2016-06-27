@@ -75,6 +75,7 @@ cross (V3T vx) (V3T vy) = V3T (vx `L.cross` vy)
 newtype Rot f1 f2 r a =
   Rot { unRot :: r a }
   deriving ( Functor, Foldable, Traversable
+           , Applicative
            , Storable
            , Num, Fractional, Eq, Show, Ord
            , Generic1, Generic
