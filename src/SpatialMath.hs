@@ -174,28 +174,75 @@ unsafeEuler321OfQuat (Quaternion q0 (V3 q1 q2 q3)) = Euler yaw pitch roll
 -- | convert a DCM to a quaternion
 --
 -- >>> quatOfDcm $ V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
--- Quaternion 1.0 (V3 (-0.0) (-0.0) (-0.0))
+-- Quaternion 1.0 (V3 0.0 0.0 0.0)
 --
 -- >>> quatOfDcm $ V3 (V3 0 1 0) (V3 (-1) 0 0) (V3 0 0 1)
--- Quaternion 0.7071067811865477 (V3 (-0.0) (-0.0) 0.7071067811865474)
+-- Quaternion 0.7071067811865476 (V3 0.0 0.0 0.7071067811865475)
 --
 -- >>> let s = sqrt(2)/2 in quatOfDcm $ V3 (V3 s s 0) (V3 (-s) s 0) (V3 0 0 1)
--- Quaternion 0.9238795325112868 (V3 (-0.0) (-0.0) 0.3826834323650898)
-quatOfDcm :: Floating a => M33 a -> Quaternion a
+-- Quaternion 0.9238795325112867 (V3 0.0 0.0 0.3826834323650898)
+quatOfDcm :: (Floating a, Ord a) => M33 a -> Quaternion a
 quatOfDcm
   (V3
-   (V3 r11 r12 r13)
-   (V3 r21 r22 r23)
-   (V3 r31 r32 r33)) = Quaternion q0 (V3 qi qj qk)
-  where
-    q0 = 0.5 * sqrt (1e-15 + (1 + r11 + r22 + r33))
-    qi = negate (r32 - r23) / fourQ0
-    qj = negate (r13 - r31) / fourQ0
-    qk = negate (r21 - r12) / fourQ0
-    fourQ0 = 4 * q0
+    (V3 r11 r12 r13)
+    (V3 r21 r22 r23)
+    (V3 r31 r32 r33)
+  )
+  | r11 + r22 + r33 > 0 =
+      let sqtrp1 = sqrt (r11 + r22 + r33 + 1)
+          q0 = 0.5*sqtrp1
+          qx = (r23 - r32)/(2.0*sqtrp1)
+          qy = (r31 - r13)/(2.0*sqtrp1)
+          qz = (r12 - r21)/(2.0*sqtrp1)
+      in Quaternion q0 (V3 qx qy qz)
+  | (r22 > r11) && (r22 > r33) =
+      let -- max value at r22
+          sqdip1' = sqrt (r22 - r11 - r33 + 1)
+
+          qy = 0.5*sqdip1'
+
+          sqdip1
+            | sqdip1' == 0 = 0
+            | otherwise = 0.5/sqdip1'
+
+          q0 = (r31 - r13)*sqdip1
+          qx = (r12 + r21)*sqdip1
+          qz = (r23 + r32)*sqdip1
+
+      in Quaternion q0 (V3 qx qy qz)
+  | r33 > r11 =
+      let -- max value at r33
+          sqdip1' = sqrt (r33 - r11 - r22 + 1)
+
+          qz = 0.5*sqdip1'
+
+          sqdip1
+            | sqdip1' == 0 = 0
+            | otherwise = 0.5/sqdip1'
+
+          q0 = (r12 - r21)*sqdip1
+          qx = (r31 + r13)*sqdip1
+          qy = (r23 + r32)*sqdip1
+
+      in Quaternion q0 (V3 qx qy qz)
+  | otherwise =
+      let -- max value at r11
+          sqdip1' = sqrt (r11 - r22 - r33 + 1)
+
+          qx = 0.5*sqdip1'
+
+          sqdip1
+            | sqdip1' == 0 = 0
+            | otherwise = 0.5/sqdip1'
+
+          q0 = (r23 - r32)*sqdip1
+          qy = (r12 + r21)*sqdip1
+          qz = (r31 + r13)*sqdip1
+
+      in Quaternion q0 (V3 qx qy qz)
 
 
-quatOfDcmB2A :: Floating a => M33 a -> Quaternion a
+quatOfDcmB2A :: (Floating a, Ord a) => M33 a -> Quaternion a
 quatOfDcmB2A = quatConjugate . quatOfDcm
 
 -- | Convert DCM to euler angles

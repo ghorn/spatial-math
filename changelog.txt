@@ -1,3 +1,6 @@
+0.4.0
+- Switch quat2dcm mode to avoid divide by 0, add Ord constraint
+
 0.2.0
 - convert to using `linear` V3, M33, Quaternion types
 - doctests

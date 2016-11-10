@@ -22,15 +22,31 @@ import SpatialMath
 main :: IO ()
 main = defaultMainWithOpts tests opts
 
-close :: forall f . (F.Foldable f, Applicative f) => Double -> f Double -> f Double -> Maybe Double
-close eps f0 f1
+closeEuler :: Double -> Euler Double -> Euler Double -> Maybe Double
+closeEuler eps f0 f1
   | all (\x -> abs x <= eps) deltas = Nothing
   | otherwise = Just $ maximum $ map abs deltas
   where
-    delta :: f Double
+    delta :: Euler Double
     delta = (-) <$> f0 <*> f1
 
     deltas = F.toList delta
+
+closeQuat :: Double -> Quaternion Double -> Quaternion Double -> Maybe Double
+closeQuat eps f0 f1
+  | worstDelta <= eps = Nothing
+  | otherwise = Just worstDelta
+  where
+    deltas0 :: Quaternion Double
+    deltas0 = (-) <$> f0 <*> f1
+
+    deltas1 :: Quaternion Double
+    deltas1 = (-) <$> f0 <*> (negate <$> f1)
+
+    worstDelta =
+      min
+      (maximum (map abs (F.toList deltas0)))
+      (maximum (map abs (F.toList deltas1)))
 
 closeDcm :: Double -> M33 Double -> M33 Double -> Maybe Double
 closeDcm eps f0 f1
@@ -80,73 +96,61 @@ instance Arbitrary (Quaternion Double) where
 instance Arbitrary (V3 (V3 Double)) where
   arbitrary = dcmOfEuler321 <$> arbitrary
 
-testConversion :: (F.Foldable f, Applicative f, Show (f Double))
-                  => Double -> (f Double -> f Double) -> f Double
+testConversion :: (Show a, Show b)
+                  => (b -> b -> Maybe Double)
+                  -> (a -> b) -> (a -> b) -> a
                   -> Property
-testConversion eps f x0 = counterexample msg ret
+testConversion toErr f0 f1 x = counterexample msg ret
   where
-    (ret, errmsg) = case close eps x0 x1 of
+    y0 = f0 x
+    y1 = f1 x
+    (ret, errmsg) = case toErr y0 y1 of
       Nothing -> (True, [])
       Just worstErr -> (False, [printf "worst error: %.3g" worstErr])
     msg = init $ unlines $
-          [ "original:  " ++ show x0
-          , "converted: " ++ show x1
+          [ "original:  " ++ show x
+          , "first route:  " ++ show y0
+          , "second route: " ++ show y1
           ] ++ errmsg
-    x1 = f x0
 
+-- inverses
 prop_e2q2e :: Euler Double -> Property
-prop_e2q2e = testConversion 1e-9 (euler321OfQuat . quatOfEuler321)
+prop_e2q2e = testConversion (closeEuler 1e-9) id (euler321OfQuat . quatOfEuler321)
 
 prop_e2d2e :: Euler Double -> Property
-prop_e2d2e = testConversion 1e-9 (euler321OfDcm . dcmOfEuler321)
+prop_e2d2e = testConversion (closeEuler 1e-9) id (euler321OfDcm . dcmOfEuler321)
 
-testDoubleConversion :: (Show f, Show g) => f -> g -> g -> Maybe Double -> Property
-testDoubleConversion orig res0 res1 err = counterexample msg ret
-  where
-    (ret, errmsg) = case err of
-      Nothing -> (True, [])
-      Just worstErr -> (False, [printf "worst error: %.3g" worstErr])
-    msg = init $ unlines $
-          [ "original: " ++ show orig
-          , "first route:  " ++ show res0
-          , "second route: " ++ show res1
-          ] ++ errmsg
+prop_d2e2d :: M33 Double -> Property
+prop_d2e2d = testConversion (closeDcm 1e-9) id (dcmOfEuler321 . euler321OfDcm)
 
+prop_d2q2d :: M33 Double -> Property
+prop_d2q2d = testConversion (closeDcm 1e-9) id (dcmOfQuat . quatOfDcm)
+
+prop_q2e2q :: Quaternion Double -> Property
+prop_q2e2q = testConversion (closeQuat 1e-9) id (quatOfEuler321 . euler321OfQuat)
+
+prop_q2d2q :: Quaternion Double -> Property
+prop_q2d2q = testConversion (closeQuat 1e-9) id (quatOfDcm . dcmOfQuat)
+
+-- two routes
 prop_e2d_e2q2d :: Euler Double -> Property
-prop_e2d_e2q2d euler = testDoubleConversion euler dcm0 dcm1 (closeDcm 1e-9 dcm0 dcm1)
-  where
-    dcm0 = dcmOfEuler321 euler
-    dcm1 = dcmOfQuat (quatOfEuler321 euler)
+prop_e2d_e2q2d = testConversion (closeDcm 1e-9) dcmOfEuler321 (dcmOfQuat . quatOfEuler321)
 
 prop_e2q_e2d2q :: Euler Double -> Property
-prop_e2q_e2d2q euler = testDoubleConversion euler quat0 quat1 (close 1e-9 quat0 quat1)
-  where
-    quat0 = makeScalarPositive (quatOfEuler321 euler)
-    quat1 = quatOfDcm (dcmOfEuler321 euler)
+prop_e2q_e2d2q =
+  testConversion (closeQuat 1e-9) (makeScalarPositive . quatOfEuler321) (quatOfDcm . dcmOfEuler321)
 
 prop_q2e_q2d2e :: Quaternion Double -> Property
-prop_q2e_q2d2e quat = testDoubleConversion quat euler0 euler1 (close 1e-9 euler0 euler1)
-  where
-    euler0 = euler321OfQuat quat
-    euler1 = euler321OfDcm (dcmOfQuat quat)
+prop_q2e_q2d2e = testConversion (closeEuler 1e-9) euler321OfQuat (euler321OfDcm . dcmOfQuat)
 
 prop_q2d_q2e2d :: Quaternion Double -> Property
-prop_q2d_q2e2d quat = testDoubleConversion quat dcm0 dcm1 (closeDcm 1e-9 dcm0 dcm1)
-  where
-    dcm0 = dcmOfQuat quat
-    dcm1 = dcmOfEuler321 (euler321OfQuat quat)
+prop_q2d_q2e2d = testConversion (closeDcm 1e-9) dcmOfQuat (dcmOfEuler321 . euler321OfQuat)
 
 prop_d2e_d2q2e :: M33 Double -> Property
-prop_d2e_d2q2e dcm = testDoubleConversion dcm euler0 euler1 (close 1e-7 euler0 euler1)
-  where
-    euler0 = euler321OfDcm dcm
-    euler1 = euler321OfQuat (quatOfDcm dcm)
+prop_d2e_d2q2e = testConversion (closeEuler 1e-7) euler321OfDcm (euler321OfQuat . quatOfDcm)
 
 prop_d2q_d2e2q :: M33 Double -> Property
-prop_d2q_d2e2q dcm = testDoubleConversion dcm quat0 quat1 (close 1e-5 quat0 quat1)
-  where
-    quat0 = quatOfDcm dcm
-    quat1 = makeScalarPositive (quatOfEuler321 (euler321OfDcm dcm))
+prop_d2q_d2e2q = testConversion (closeQuat 1e-5) quatOfDcm (makeScalarPositive . quatOfEuler321 . euler321OfDcm)
 
 makeScalarPositive :: Quaternion Double -> Quaternion Double
 makeScalarPositive quat0'@(Quaternion q0 _)
@@ -156,16 +160,20 @@ makeScalarPositive quat0'@(Quaternion q0 _)
 tests :: [Test]
 tests =
   [ testGroup "inverses"
-    [ testProperty "(euler -> quat -> euler) == euler" prop_e2q2e
-    , testProperty "(euler -> dcm -> euler) == euler" prop_e2d2e
+    [ testProperty "euler == (euler -> quat  -> euler)" prop_e2q2e
+    , testProperty "euler == (euler -> dcm   -> euler)" prop_e2d2e
+    , testProperty "dcm   == (dcm   -> euler -> dcm  )" prop_d2e2d
+    , testProperty "dcm   == (dcm   -> quat  -> dcm  )" prop_d2q2d
+    , testProperty "quat  == (quat  -> euler -> quat )" prop_q2e2q
+    , testProperty "quat  == (quat  -> dcm   -> quat )" prop_q2d2q
     ]
   , testGroup "two routes"
-    [ testProperty "(euler -> dcm) == (euler -> quat -> dcm)" prop_e2d_e2q2d
-    , testProperty "(euler -> quat) == (euler -> dcm -> quat)" prop_e2q_e2d2q
-    , testProperty "(quat -> euler) == (quat -> dcm -> euler)" prop_q2e_q2d2e
-    , testProperty "(quat -> dcm) == (quat -> euler -> dcm)" prop_q2d_q2e2d
-    , testProperty "(dcm -> euler) == (dcm -> quat -> euler)" prop_d2e_d2q2e
-    , testProperty "(dcm -> quat) == (dcm -> euler -> quat)" prop_d2q_d2e2q
+    [ testProperty "(euler -> dcm  ) == (euler -> quat  -> dcm  )" prop_e2d_e2q2d
+    , testProperty "(euler -> quat ) == (euler -> dcm   -> quat )" prop_e2q_e2d2q
+    , testProperty "(quat  -> euler) == (quat  -> dcm   -> euler)" prop_q2e_q2d2e
+    , testProperty "(quat  -> dcm  ) == (quat  -> euler -> dcm  )" prop_q2d_q2e2d
+    , testProperty "(dcm   -> euler) == (dcm   -> quat  -> euler)" prop_d2e_d2q2e
+    , testProperty "(dcm   -> quat ) == (dcm   -> euler -> quat )" prop_d2q_d2e2q
     ]
   ]
 
@@ -181,4 +189,5 @@ my_test_opts :: TestOptions' Maybe
 my_test_opts =
   Mo.mempty
   { topt_timeout = Just (Just 15000000)
+  , topt_maximum_generated_tests = Just 1000
   }

@@ -134,7 +134,7 @@ dcmOfEuler321 :: Floating a => Rot f g Euler a -> Rot f g (V3 :. V3) a
 dcmOfEuler321 = Rot . O . SM.dcmOfEuler321 . unRot
 
 
-quatOfDcm :: Floating a => Rot f g (V3 :. V3) a -> Rot f g Quaternion a
+quatOfDcm :: (Floating a, Ord a) => Rot f g (V3 :. V3) a -> Rot f g Quaternion a
 quatOfDcm = Rot . SM.quatOfDcm . unO . unRot
 
 quatOfEuler321 :: Floating a => Rot f g Euler a -> Rot f g Quaternion a
