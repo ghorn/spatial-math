@@ -8,25 +8,12 @@ cache:
   directories:
   - $HOME/.stack
 
-addons:
-  apt:
-    sources:
-    - hvr-ghc
-
-    packages:
-    - libgmp-dev
-    - ghc-7.10.3
-    - cabal-install-1.24
-
 before_install:
  # Download and unpack the stack executable
  - mkdir -p ~/.local/bin
  - export PATH=$HOME/.local/bin:$PATH
  - travis_retry curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
  - chmod a+x ~/.local/bin/stack
-
- # haskell deps
- - export PATH=/opt/ghc/7.10.3/bin:/opt/cabal/1.24/bin:$PATH
 
 install:
   - stack setup --no-terminal
