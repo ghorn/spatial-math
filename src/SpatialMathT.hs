@@ -31,7 +31,7 @@ module SpatialMathT
        , (:.)(..), unO
        ) where
 
-import Control.Applicative ( Applicative )
+import Control.Applicative ( Applicative, pure)
 import Control.Compose ( (:.)(..), unO )
 import Data.Foldable ( Foldable )
 import Data.Binary ( Binary(..) )
