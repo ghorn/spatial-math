@@ -1,3 +1,7 @@
+0.5.0
+- Replace calls to Prelude's `atan2` function with calls to the C math
+  library in `ArcTan2` instances for `Float` and `Double`
+
 0.4.0
 - Switch quat2dcm mode to avoid divide by 0, add Ord constraint
 
