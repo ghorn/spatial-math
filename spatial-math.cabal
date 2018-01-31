@@ -18,6 +18,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     SpatialMath
                        SpatialMathT
+                       SpatialMath.Internal
   other-modules:       Types
   build-depends:       base >= 4 && < 5,
                        ghc-prim,
