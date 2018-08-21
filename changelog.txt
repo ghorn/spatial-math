@@ -1,3 +1,6 @@
+0.5.0.1
+- Fix doctest include path.
+
 0.5.0
 - Replace calls to Prelude's `atan2` function with calls to the C math
   library in `ArcTan2` instances for `Float` and `Double`
