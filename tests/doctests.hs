@@ -1,8 +1,2 @@
-{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -F -pgmF doctest-discover #-}
 
-module Main where
-
-import Test.DocTest
-
-main :: IO ()
-main = doctest ["-isrc", "src/Types.hs", "src/SpatialMath.hs"]
