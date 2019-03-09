@@ -1,4 +1,5 @@
 HEAD
+- Reorganize directory structure and make typed interface the central one.
 - Add serialise instances.
 - Drop Generic/Generic1/Typeable/Typeable1 instances for older GHCs
 

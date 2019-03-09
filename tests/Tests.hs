@@ -8,13 +8,23 @@ module Main ( main ) where
 import qualified Data.Foldable as F
 import qualified Data.Monoid as Mo
 import Test.Framework
-       ( Test, ColorMode(..), RunnerOptions'(..), TestOptions'(..)
-       , defaultMainWithOpts, testGroup )
+  ( Test, ColorMode(..), RunnerOptions'(..), TestOptions'(..)
+  , defaultMainWithOpts, testGroup )
 import Test.Framework.Providers.QuickCheck2 ( testProperty )
 import Test.QuickCheck
 import Text.Printf ( printf )
 
-import SpatialMath
+import SpatialMath.Euler ( Euler(..) )
+import SpatialMath.Untyped
+  ( M33, Quaternion(..), V3(..)
+  , euler321OfQuat
+  , euler321OfDcm
+  , quatOfEuler321
+  , dcmOfQuat
+  , dcmOfEuler321
+  , quatOfDcm
+  )
+
 
 main :: IO ()
 main = defaultMainWithOpts tests opts

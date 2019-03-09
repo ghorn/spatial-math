@@ -15,10 +15,14 @@ extra-source-files:  README.md
 
 library
   hs-source-dirs:      src
+
   exposed-modules:     SpatialMath
-                       SpatialMathT
-                       SpatialMath.Internal
-  other-modules:       Types
+                       SpatialMath.ArcTan2
+                       SpatialMath.Euler
+                       SpatialMath.Untyped
+
+  other-modules:       SpatialMath.LibmFfi
+
   build-depends:       base >= 4 && < 5,
                        ghc-prim,
                        cereal,
@@ -27,7 +31,9 @@ library
                        linear >= 1.17.1,
                        lens,
                        TypeCompose >= 0.9.11
+
   default-language:    Haskell2010
+
   ghc-options:         -Wall -Werror
 
 source-repository head

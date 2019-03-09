@@ -1,452 +1,220 @@
 {-# OPTIONS_GHC -Wall #-}
-{-# Language ScopedTypeVariables #-}
+{-# Language MultiParamTypeClasses #-}
+{-# Language FunctionalDependencies #-}
+{-# Language FlexibleInstances #-}
+{-# Language GeneralizedNewtypeDeriving #-}
+{-# Language DeriveFunctor #-}
+{-# Language DeriveFoldable #-}
+{-# Language DeriveTraversable #-}
+{-# Language DeriveGeneric #-}
+{-# Language TypeOperators #-}
 
 module SpatialMath
-       ( Euler(..)
-       , ArcTan2(..)
-       , rotateXyzAboutX
-       , rotateXyzAboutY
-       , rotateXyzAboutZ
-       , euler321OfQuat
-       , unsafeEuler321OfQuat
-       , euler321OfDcm
-       , unsafeEuler321OfDcm
-       , quatOfEuler321
-       , dcmOfQuat
-       , dcmOfQuatB2A
-       , dcmOfEuler321
-       , quatOfDcm
-       , quatOfDcmB2A
-       , rotVecByDcm
-       , rotVecByDcmB2A
-       , rotVecByQuat
-       , rotVecByQuatB2A
-       , rotVecByEuler
-       , rotVecByEulerB2A
-         -- * re-exported from linear
-       , M33
-       , V3(..)
-       , Quaternion(..)
-       ) where
+  ( ArcTan2(..)
+  , Euler(..)
+  , Quaternion(..), V3(..)
+  , Rotation(..)
+  , Rot(..)
+  , V3T(..)
+  , R1(..), R2(..), R3(..)
+  , cross
+  , orthonormalize
+  , dcmOfQuat
+  , dcmOfEuler321
+  , quatOfDcm
+  , quatOfEuler321
+  , euler321OfDcm
+  , unsafeEuler321OfDcm
+  , euler321OfQuat
+  , unsafeEuler321OfQuat
+    -- * re-export for convenience
+  , (:.)(..), unO
+  ) where
 
-import Linear
+import GHC.Generics ( Generic, Generic1 )
 
-import Types
+import Codec.Serialise ( Serialise(..) )
+import Control.Applicative ( Applicative, pure)
+import Control.Compose ( (:.)(..), unO )
+import Data.Foldable ( Foldable )
+import Data.Binary ( Binary(..) )
+import Data.Serialize ( Serialize(..) )
+import Data.Traversable ( Traversable )
+import Foreign.Storable ( Storable )
+import Linear hiding ( cross, normalize, transpose )
+import qualified Linear as L
 
-import SpatialMath.Internal ( libm_atan2, libm_atan2f )
-
--- $setup
--- |
--- >>> :{
---     let trunc :: Functor f => f Double -> f Double
---         trunc = fmap trunc'
---           where
---             trunc' x
---               | nearZero x = 0
---               | nearZero (x - 1) = 1
---               | nearZero (x + 1) = -1
---               | otherwise = x
---         inf = 1/0
---         neginf = negate inf
--- :}
+import SpatialMath.ArcTan2 ( ArcTan2(..) )
+import SpatialMath.Euler ( Euler(..) )
+import qualified SpatialMath.Untyped as SM
 
 
--- | doesn't require RealFloat, used for overloading symbolics
-class Floating a => ArcTan2 a where
-  -- | @arctan2 y x@ computes the arctangent from two arguments.  The
-  -- 'Double' and 'Float' instances call out to a sufficiently recent
-  -- version of @libm@ to compute this.
-  --
-  -- The following test cases are the /full/ set of recommended
-  -- function properties specified for function @atan2Pi()@ on page 45
-  -- of the IEEE Std 754-2008 document.
-  --
-  -- >>> arctan2 0 (-0) :: Double
-  -- 3.141592653589793
-  -- >>> arctan2 (-0) (-0) :: Double
-  -- -3.141592653589793
-  -- >>> arctan2 0 0 :: Double
-  -- 0.0
-  -- >>> arctan2 (-0) 0 :: Double
-  -- -0.0
-  --
-  -- prop> \x -> x < 0 ==> arctan2 (-0) x == (-pi :: Double)
-  -- prop> \x -> x < 0 ==> arctan2 0 x == (pi :: Double)
-  -- prop> \x -> x > 0 ==> arctan2 (-0) x == (-0 :: Double)
-  -- prop> \x -> x > 0 ==> arctan2 0 x == (0 :: Double)
-  -- prop> \y -> y < 0 ==> arctan2 y (-0) == (-pi / 2 :: Double)
-  -- prop> \y -> y > 0 ==> arctan2 y 0 == (pi / 2 :: Double)
-  -- prop> \y -> y > 0 && not (isNaN y || isInfinite y) ==> arctan2 y (negate $ 1/0) == (pi :: Double)
-  -- prop> \y -> y < 0 && not (isNaN y || isInfinite y) ==> arctan2 y (negate $ 1/0) == (-pi :: Double)
-  -- prop> \y -> y > 0 && not (isNaN y || isInfinite y) ==> arctan2 y (1/0) == (0 :: Double)
-  -- prop> \y -> y < 0 && not (isNaN y || isInfinite y) ==> arctan2 y (1/0) == (-0 :: Double)
-  -- prop> \x -> not (isNaN x || isInfinite x) ==> arctan2 (negate $ 1/0) x == (-pi/2 :: Double)
-  -- prop> \x -> not (isNaN x || isInfinite x) ==> arctan2 (1/0) x == (pi/2 :: Double)
-  --
-  -- >>> arctan2 neginf neginf :: Double
-  -- -2.356194490192345
-  -- >>> arctan2 inf neginf :: Double
-  -- 2.356194490192345
-  -- >>> arctan2 neginf inf :: Double
-  -- -0.7853981633974483
-  -- >>> arctan2 inf inf :: Double
-  -- 0.7853981633974483
-  arctan2 :: a -> a -> a
-instance ArcTan2 Double where
-  arctan2 = libm_atan2
-instance ArcTan2 Float where
-  arctan2 = libm_atan2f
+newtype V3T f a = V3T {unV :: V3 a}
+                deriving ( Functor, Foldable, Traversable
+                         , Applicative
+                         , Additive, Metric, Storable
+                         , Num, Fractional, Eq, Show, Ord
+                         , Generic1, Generic
+                         , Serialize, Binary
+                         -- TODO(greg): add Serialise after Linear adds it.
+                         )
 
-normalize' :: Floating a => Quaternion a -> Quaternion a
-normalize' q = fmap (* normInv) q
-  where
-    normInv = 1/(norm q)
+instance R1 (V3T f) where
+  _x f (V3T v) = fmap V3T $ _x f v
+  {-# INLINE _x #-}
+instance R2 (V3T f) where
+  _y f (V3T v) = fmap V3T $ _y f v
+  {-# INLINE _y #-}
+  _xy f (V3T v) = fmap V3T $ _xy f v
+  {-# INLINE _xy #-}
+instance R3 (V3T f) where
+  _z f (V3T v) = fmap V3T $ _z f v
+  {-# INLINE _z #-}
+  _xyz f (V3T v) = fmap V3T $ _xyz f v
+  {-# INLINE _xyz #-}
 
---normalize' :: (Floating a, Epsilon a) => Quaternion a -> Quaternion a
---normalize' = normalize
+cross :: Num a => V3T f a -> V3T f a -> V3T f a
+cross (V3T vx) (V3T vy) = V3T (vx `L.cross` vy)
 
--- | Rotate a vector about the X axis
---
--- >>> trunc $ rotateXyzAboutX (V3 0 1 0) (pi/2)
--- V3 0.0 0.0 1.0
---
--- >>> trunc $ rotateXyzAboutX (V3 0 0 1) (pi/2)
--- V3 0.0 (-1.0) 0.0
-rotateXyzAboutX :: Floating a => V3 a -> a -> V3 a
-rotateXyzAboutX (V3 ax ay az) rotAngle = V3 bx by bz
-  where
-    cosTheta = cos rotAngle
-    sinTheta = sin rotAngle
+newtype Rot f1 f2 r a =
+  Rot { unRot :: r a }
+  deriving ( Functor, Foldable, Traversable
+           , Applicative
+           , Storable
+           , Num, Fractional, Eq, Show, Ord
+           , Generic1, Generic
+           , Binary, Serialize, Serialise
+           )
 
-    bx =  ax
-    by =  ay*cosTheta - az*sinTheta
-    bz =  ay*sinTheta + az*cosTheta
+class Rotation g a where
+  compose :: Rot f1 f2 g a -> Rot f2 f3 g a -> Rot f1 f3 g a
+  rot  :: Rot f1 f2 g a -> V3T f1 a -> V3T f2 a
+  rot' :: Rot f1 f2 g a -> V3T f2 a -> V3T f1 a
+  transpose :: Rot f1 f2 g a -> Rot f2 f1 g a
+  identity :: Rot f1 f2 g a
 
--- | Rotate a vector about the Y axis
---
--- >>> trunc $ rotateXyzAboutY (V3 0 0 1) (pi/2)
--- V3 1.0 0.0 0.0
---
--- >>> trunc $ rotateXyzAboutY (V3 1 0 0) (pi/2)
--- V3 0.0 0.0 (-1.0)
-rotateXyzAboutY :: Floating a => V3 a -> a -> V3 a
-rotateXyzAboutY (V3 ax ay az) rotAngle = V3 bx by bz
-  where
-    cosTheta = cos rotAngle
-    sinTheta = sin rotAngle
+instance Num a => Rotation Quaternion a where
+  compose (Rot q_a2b) (Rot q_b2c) = Rot (q_a2b `quatMult` q_b2c)
+    where
+      -- quaternion multiplication which doesn't require RealFrac
+      quatMult :: Num a => Quaternion a -> Quaternion a -> Quaternion a
+      quatMult (Quaternion s1 v1) (Quaternion s2 v2) =
+        Quaternion (s1*s2 - (v1 `dot` v2)) $
+        (v1 `L.cross` v2) + s1*^v2 + s2*^v1
 
-    bx =  ax*cosTheta + az*sinTheta
-    by =  ay
-    bz = -ax*sinTheta + az*cosTheta
+  rot  (Rot q_a2b) (V3T va) = V3T (SM.rotVecByQuat    q_a2b va)
+  rot' (Rot q_a2b) (V3T vb) = V3T (SM.rotVecByQuatB2A q_a2b vb)
+  transpose (Rot (Quaternion q0 qxyz)) = Rot (Quaternion q0 (fmap negate qxyz))
+  identity = Rot (Quaternion 1 (pure 0))
 
--- | Rotate a vector about the Z axis
---
--- >>> trunc $ rotateXyzAboutZ (V3 1 0 0) (pi/2)
--- V3 0.0 1.0 0.0
---
--- >>> trunc $ rotateXyzAboutZ (V3 0 1 0) (pi/2)
--- V3 (-1.0) 0.0 0.0
---
-rotateXyzAboutZ :: Floating a => V3 a -> a -> V3 a
-rotateXyzAboutZ (V3 ax ay az) rotAngle = V3 bx by bz
-  where
-    cosTheta = cos rotAngle
-    sinTheta = sin rotAngle
-
-    bx =  ax*cosTheta - ay*sinTheta
-    by =  ax*sinTheta + ay*cosTheta
-    bz =  az
-
-
--- | Convert quaternion to Euler angles
---
--- >>> euler321OfQuat (Quaternion 1.0 (V3 0.0 0.0 0.0))
--- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 0.0}
---
--- >>> euler321OfQuat (Quaternion (sqrt(2)/2) (V3 (sqrt(2)/2) 0.0 0.0))
--- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 1.5707963267948966}
---
--- >>> euler321OfQuat (Quaternion (sqrt(2)/2) (V3 0.0 (sqrt(2)/2) 0.0))
--- Euler {eYaw = 0.0, ePitch = 1.5707963267948966, eRoll = 0.0}
---
--- >>> euler321OfQuat (Quaternion (sqrt(2)/2) (V3 0.0 0.0 (sqrt(2)/2)))
--- Euler {eYaw = 1.5707963267948966, ePitch = -0.0, eRoll = 0.0}
---
-euler321OfQuat :: (ArcTan2 a, Ord a) => Quaternion a -> Euler a
-euler321OfQuat (Quaternion q0 (V3 q1 q2 q3)) = Euler yaw pitch roll
-  where
-    r11 = q0*q0 + q1*q1 - q2*q2 - q3*q3
-    r12 = 2.0*(q1*q2 + q0*q3)
-    mr13' = -2.0*(q1*q3 - q0*q2)
-    mr13 -- nan protect
-      | mr13' >  1 =  1
-      | mr13' < -1 = -1
-      | otherwise = mr13'
-    r23 = 2.0*(q2*q3 + q0*q1)
-    r33 = q0*q0 - q1*q1 - q2*q2 + q3*q3
-
-    yaw   = arctan2 r12 r11
-    pitch = asin mr13
-    roll  = arctan2 r23 r33
-
--- | Convert quaternion to Euler angles. Returns Nan if 2.0*(q1*q3 - q0*q2) is outside [-1, 1].
---
--- >>> unsafeEuler321OfQuat (Quaternion 1.0 (V3 0.0 0.0 0.0))
--- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 0.0}
---
--- >>> unsafeEuler321OfQuat (Quaternion (sqrt(2)/2) (V3 (sqrt(2)/2) 0.0 0.0))
--- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 1.5707963267948966}
---
--- >>> unsafeEuler321OfQuat (Quaternion (sqrt(2)/2) (V3 0.0 (sqrt(2)/2) 0.0))
--- Euler {eYaw = 0.0, ePitch = NaN, eRoll = 0.0}
---
--- >>> unsafeEuler321OfQuat (Quaternion (sqrt(2)/2) (V3 0.0 0.0 (sqrt(2)/2)))
--- Euler {eYaw = 1.5707963267948966, ePitch = -0.0, eRoll = 0.0}
---
-unsafeEuler321OfQuat :: ArcTan2 a => Quaternion a -> Euler a
-unsafeEuler321OfQuat (Quaternion q0 (V3 q1 q2 q3)) = Euler yaw pitch roll
-  where
-    r11 = q0*q0 + q1*q1 - q2*q2 - q3*q3
-    r12 = 2.0*(q1*q2 + q0*q3)
-    mr13 = -2.0*(q1*q3 - q0*q2)
-    r23 = 2.0*(q2*q3 + q0*q1)
-    r33 = q0*q0 - q1*q1 - q2*q2 + q3*q3
-
-    yaw   = arctan2 r12 r11
-    pitch = asin mr13
-    roll  = arctan2 r23 r33
-
--- | convert a DCM to a quaternion
---
--- >>> quatOfDcm $ V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
--- Quaternion 1.0 (V3 0.0 0.0 0.0)
---
--- >>> quatOfDcm $ V3 (V3 0 1 0) (V3 (-1) 0 0) (V3 0 0 1)
--- Quaternion 0.7071067811865476 (V3 0.0 0.0 0.7071067811865475)
---
--- >>> let s = sqrt(2)/2 in quatOfDcm $ V3 (V3 s s 0) (V3 (-s) s 0) (V3 0 0 1)
--- Quaternion 0.9238795325112867 (V3 0.0 0.0 0.3826834323650898)
-quatOfDcm :: (Floating a, Ord a) => M33 a -> Quaternion a
-quatOfDcm
-  (V3
-    (V3 r11 r12 r13)
-    (V3 r21 r22 r23)
-    (V3 r31 r32 r33)
-  )
-  | r11 + r22 + r33 > 0 =
-      let sqtrp1 = sqrt (r11 + r22 + r33 + 1)
-          q0 = 0.5*sqtrp1
-          qx = (r23 - r32)/(2.0*sqtrp1)
-          qy = (r31 - r13)/(2.0*sqtrp1)
-          qz = (r12 - r21)/(2.0*sqtrp1)
-      in Quaternion q0 (V3 qx qy qz)
-  | (r22 > r11) && (r22 > r33) =
-      let -- max value at r22
-          sqdip1' = sqrt (r22 - r11 - r33 + 1)
-
-          qy = 0.5*sqdip1'
-
-          sqdip1
-            | sqdip1' == 0 = 0
-            | otherwise = 0.5/sqdip1'
-
-          q0 = (r31 - r13)*sqdip1
-          qx = (r12 + r21)*sqdip1
-          qz = (r23 + r32)*sqdip1
-
-      in Quaternion q0 (V3 qx qy qz)
-  | r33 > r11 =
-      let -- max value at r33
-          sqdip1' = sqrt (r33 - r11 - r22 + 1)
-
-          qz = 0.5*sqdip1'
-
-          sqdip1
-            | sqdip1' == 0 = 0
-            | otherwise = 0.5/sqdip1'
-
-          q0 = (r12 - r21)*sqdip1
-          qx = (r31 + r13)*sqdip1
-          qy = (r23 + r32)*sqdip1
-
-      in Quaternion q0 (V3 qx qy qz)
-  | otherwise =
-      let -- max value at r11
-          sqdip1' = sqrt (r11 - r22 - r33 + 1)
-
-          qx = 0.5*sqdip1'
-
-          sqdip1
-            | sqdip1' == 0 = 0
-            | otherwise = 0.5/sqdip1'
-
-          q0 = (r23 - r32)*sqdip1
-          qy = (r12 + r21)*sqdip1
-          qz = (r31 + r13)*sqdip1
-
-      in Quaternion q0 (V3 qx qy qz)
-
-
-quatOfDcmB2A :: (Floating a, Ord a) => M33 a -> Quaternion a
-quatOfDcmB2A = quatConjugate . quatOfDcm
-
--- | Convert DCM to euler angles
---
--- >>> euler321OfDcm $ V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
--- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 0.0}
---
--- >>> euler321OfDcm $ V3 (V3 0 1 0) (V3 (-1) 0 0) (V3 0 0 1)
--- Euler {eYaw = 1.5707963267948966, ePitch = -0.0, eRoll = 0.0}
---
--- >>> let s = sqrt(2)/2 in euler321OfDcm $ V3 (V3 s s 0) (V3 (-s) s 0) (V3 0 0 1)
--- Euler {eYaw = 0.7853981633974483, ePitch = -0.0, eRoll = 0.0}
---
-euler321OfDcm :: (Ord a, ArcTan2 a) => M33 a -> Euler a
-euler321OfDcm
-  (V3
-   (V3 r11 r12 r13)
-   (V3   _   _ r23)
-   (V3   _   _ r33)) = Euler yaw pitch roll
-  where
-    mr13' = -r13
-    mr13 -- nan protect
-      | mr13' >  1 =  1
-      | mr13' < -1 = -1
-      | otherwise = mr13'
-
-    yaw   = arctan2 r12 r11
-    pitch = asin mr13
-    roll  = arctan2 r23 r33
-
--- | Convert DCM to euler angles. Returns Nan if r[1,3] is outside [-1, 1].
---
--- >>> unsafeEuler321OfDcm $ V3 (V3 1 0 0) (V3 0 1 0) (V3 0 0 1)
--- Euler {eYaw = 0.0, ePitch = -0.0, eRoll = 0.0}
---
--- >>> unsafeEuler321OfDcm $ V3 (V3 0 1 0) (V3 (-1) 0 0) (V3 0 0 1)
--- Euler {eYaw = 1.5707963267948966, ePitch = -0.0, eRoll = 0.0}
---
--- >>> let s = sqrt(2)/2 in unsafeEuler321OfDcm $ V3 (V3 s s 0) (V3 (-s) s 0) (V3 0 0 1)
--- Euler {eYaw = 0.7853981633974483, ePitch = -0.0, eRoll = 0.0}
---
--- >>> unsafeEuler321OfDcm $ V3 (V3 0 0 1.1) (V3 0 0 0) (V3 0 0 0)
--- Euler {eYaw = 0.0, ePitch = NaN, eRoll = 0.0}
---
-unsafeEuler321OfDcm :: ArcTan2 a => M33 a -> Euler a
-unsafeEuler321OfDcm
-  (V3
-   (V3 r11 r12 r13)
-   (V3   _   _ r23)
-   (V3   _   _ r33)) = Euler yaw pitch roll
-  where
-    yaw   = arctan2 r12 r11
-    pitch = asin (-r13)
-    roll  = arctan2 r23 r33
-
--- | Convert Euler angles to quaternion. The scalar part of the result may be positive or negative.
---
--- >>> quatOfEuler321 (Euler 0 0 0)
--- Quaternion 1.0 (V3 0.0 0.0 0.0)
---
--- >>> quatOfEuler321 (Euler (pi/2) 0 0)
--- Quaternion 0.7071067811865476 (V3 0.0 0.0 0.7071067811865475)
---
--- >>> quatOfEuler321 (Euler 0 (pi/2) 0)
--- Quaternion 0.7071067811865476 (V3 0.0 0.7071067811865475 0.0)
---
--- >>> quatOfEuler321 (Euler 0 0 (pi/2))
--- Quaternion 0.7071067811865476 (V3 0.7071067811865475 0.0 0.0)
---
-quatOfEuler321 :: Floating a => Euler a -> Quaternion a
-quatOfEuler321 (Euler yaw pitch roll) = normalize' q
-  where
-    sr2 = sin $ 0.5*roll
-    cr2 = cos $ 0.5*roll
-    sp2 = sin $ 0.5*pitch
-    cp2 = cos $ 0.5*pitch
-    sy2 = sin $ 0.5*yaw
-    cy2 = cos $ 0.5*yaw
-    q0 = cr2*cp2*cy2 + sr2*sp2*sy2
-    q1 = sr2*cp2*cy2 - cr2*sp2*sy2
-    q2 = cr2*sp2*cy2 + sr2*cp2*sy2
-    q3 = cr2*cp2*sy2 - sr2*sp2*cy2
-
-    q = Quaternion q0 (V3 q1 q2 q3)
-
-
--- | convert a quaternion to a DCM
---
--- >>> dcmOfQuat $ Quaternion 1.0 (V3 0.0 0.0 0.0)
--- V3 (V3 1.0 0.0 0.0) (V3 0.0 1.0 0.0) (V3 0.0 0.0 1.0)
---
--- >>> let s = sqrt(2)/2 in fmap trunc $ dcmOfQuat $ Quaternion s (V3 0.0 0.0 s)
--- V3 (V3 0.0 1.0 0.0) (V3 (-1.0) 0.0 0.0) (V3 0.0 0.0 1.0)
---
--- >>> dcmOfQuat $ Quaternion 0.9238795325112867 (V3 0.0 0.0 0.3826834323650898)
--- V3 (V3 0.7071067811865475 0.7071067811865476 0.0) (V3 (-0.7071067811865476) 0.7071067811865475 0.0) (V3 0.0 0.0 1.0)
---
-dcmOfQuat :: Num a => Quaternion a -> M33 a
-dcmOfQuat q = V3
-              (V3 m11 m21 m31)
-              (V3 m12 m22 m32)
-              (V3 m13 m23 m33)
-  where
+instance Num a => Rotation (V3 :. V3) a where
+  compose (Rot (O dcm_a2b)) (Rot (O dcm_b2c)) = Rot $ O (dcm_b2c !*! dcm_a2b)
+  rot  (Rot (O dcm_a2b)) (V3T va) = V3T (SM.rotVecByDcm    dcm_a2b va)
+  rot' (Rot (O dcm_a2b)) (V3T vb) = V3T (SM.rotVecByDcmB2A dcm_a2b vb)
+  transpose
+    (Rot
+     (O
+      (V3
+       (V3 e11 e12 e13)
+       (V3 e21 e22 e23)
+       (V3 e31 e32 e33)))) =
+    Rot $ O $
     V3
-      (V3 m11 m12 m13)
-      (V3 m21 m22 m23)
-      (V3 m31 m32 m33) = fromQuaternion q
+    (V3 e11 e21 e31)
+    (V3 e12 e22 e32)
+    (V3 e13 e23 e33)
+  identity =
+    Rot $ O $
+    V3
+    (V3 1 0 0)
+    (V3 0 1 0)
+    (V3 0 0 1)
 
--- | Convert DCM to euler angles
---
--- >>> fmap trunc $ dcmOfEuler321 $ Euler {eYaw = 0.0, ePitch = 0, eRoll = 0}
--- V3 (V3 1.0 0.0 0.0) (V3 0.0 1.0 0.0) (V3 0.0 0.0 1.0)
---
--- >>> fmap trunc $ dcmOfEuler321 $ Euler {eYaw = pi/2, ePitch = 0, eRoll = 0}
--- V3 (V3 0.0 1.0 0.0) (V3 (-1.0) 0.0 0.0) (V3 0.0 0.0 1.0)
---
--- >>> fmap trunc $ dcmOfEuler321 $ Euler {eYaw = pi/4, ePitch = 0, eRoll = 0}
--- V3 (V3 0.7071067811865476 0.7071067811865475 0.0) (V3 (-0.7071067811865475) 0.7071067811865476 0.0) (V3 0.0 0.0 1.0)
---
-dcmOfEuler321 :: Floating a => Euler a -> M33 a
-dcmOfEuler321 euler = dcm
+
+dcmOfQuat :: Num a => Rot f g Quaternion a -> Rot f g (V3 :. V3) a
+dcmOfQuat = Rot . O . SM.dcmOfQuat . unRot
+
+dcmOfEuler321 :: Floating a => Rot f g Euler a -> Rot f g (V3 :. V3) a
+dcmOfEuler321 = Rot . O . SM.dcmOfEuler321 . unRot
+
+
+quatOfDcm :: (Floating a, Ord a) => Rot f g (V3 :. V3) a -> Rot f g Quaternion a
+quatOfDcm = Rot . SM.quatOfDcm . unO . unRot
+
+quatOfEuler321 :: Floating a => Rot f g Euler a -> Rot f g Quaternion a
+quatOfEuler321 = Rot . SM.quatOfEuler321 . unRot
+
+
+unsafeEuler321OfDcm :: ArcTan2 a => Rot f g (V3 :. V3) a -> Rot f g Euler a
+unsafeEuler321OfDcm = Rot . SM.unsafeEuler321OfDcm . unO . unRot
+
+euler321OfDcm :: (ArcTan2 a, Ord a) => Rot f g (V3 :. V3) a -> Rot f g Euler a
+euler321OfDcm = Rot . SM.euler321OfDcm . unO . unRot
+
+euler321OfQuat :: (ArcTan2 a, Ord a) => Rot f g Quaternion a -> Rot f g Euler a
+euler321OfQuat = Rot . SM.euler321OfQuat . unRot
+
+unsafeEuler321OfQuat :: ArcTan2 a => Rot f g Quaternion a -> Rot f g Euler a
+unsafeEuler321OfQuat = Rot . SM.unsafeEuler321OfQuat . unRot
+
+instance (ArcTan2 a, Floating a, Ord a) => Rotation Euler a where
+  -- defined in terms of quaternion composition
+  compose e_a2b e_b2c = euler321OfQuat q_a2c
+    where
+      q_a2b = quatOfEuler321 e_a2b
+      q_b2c = quatOfEuler321 e_b2c
+      q_a2c = compose q_a2b q_b2c
+
+  rot  (Rot e_a2b) (V3T va) = V3T (SM.rotVecByEuler e_a2b va)
+  rot' (Rot e_a2b) (V3T vb) = V3T (SM.rotVecByEulerB2A e_a2b vb)
+  transpose = euler321OfQuat . transpose . quatOfEuler321
+  identity = Rot (Euler 0 0 0)
+
+
+orthonormalize :: Floating a => Rot f1 f2 (V3 :. V3) a -> Rot f1 f2 (V3 :. V3) a
+orthonormalize
+  (Rot
+   (O
+    (V3
+     (V3 m00 m01 m02)
+     (V3 m10 m11 m12)
+     (V3 m20 m21 m22)))) = Rot (O ret)
   where
-    cPs = cos (eYaw euler)
-    sPs = sin (eYaw euler)
-    cTh = cos (ePitch euler)
-    sTh = sin (ePitch euler)
-    cPh = cos (eRoll euler)
-    sPh = sin (eRoll euler)
+    -- compute q0
+    fInvLength0 = 1.0/sqrt(m00*m00 + m10*m10 + m20*m20)
 
-    dcm =
-      V3
-      (V3 (cTh*cPs) (cTh*sPs) (-sTh))
-      (V3 (cPs*sTh*sPh - cPh*sPs) ( cPh*cPs + sTh*sPh*sPs) (cTh*sPh))
-      (V3 (cPh*cPs*sTh + sPh*sPs) (-cPs*sPh + cPh*sTh*sPs) (cTh*cPh))
+    m00' = m00*fInvLength0
+    m10' = m10*fInvLength0
+    m20' = m20*fInvLength0
 
-quatConjugate :: Num a => Quaternion a -> Quaternion a
-quatConjugate (Quaternion q0 qv) = Quaternion q0 (fmap negate qv)
+    -- compute q1
+    fDot0' = m00'*m01 + m10'*m11 + m20'*m21
 
-dcmOfQuatB2A :: Num a => Quaternion a -> M33 a
-dcmOfQuatB2A = dcmOfQuat . quatConjugate
+    m01' = m01 - fDot0'*m00'
+    m11' = m11 - fDot0'*m10'
+    m21' = m21 - fDot0'*m20'
 
--- | vec_b = R_a2b * vec_a
-rotVecByDcm :: Num a => M33 a -> V3 a -> V3 a
-rotVecByDcm dcm vec = dcm !* vec
+    fInvLength1 = 1.0/sqrt(m01'*m01' + m11'*m11' + m21'*m21')
 
--- | vec_a = R_a2b^T * vec_b
-rotVecByDcmB2A :: Num a => M33 a -> V3 a -> V3 a
-rotVecByDcmB2A dcm vec = vec *! dcm
+    m01'' = m01' * fInvLength1
+    m11'' = m11' * fInvLength1
+    m21'' = m21' * fInvLength1
 
--- | vec_b = q_a2b * vec_a * q_a2b^(-1)
---   vec_b = R(q_a2b) * vec_a
-rotVecByQuat :: Num a => Quaternion a -> V3 a -> V3 a
-rotVecByQuat q = rotVecByDcm (dcmOfQuat q)
+    -- compute q2
+    fDot1 = m01''*m02 + m11''*m12 + m21''*m22
+    fDot0 = m00'*m02 + m10'*m12 + m20'*m22
 
-rotVecByQuatB2A :: Num a => Quaternion a -> V3 a -> V3 a
-rotVecByQuatB2A q = rotVecByDcmB2A (dcmOfQuat q)
+    m02' = m02 - (fDot0*m00' + fDot1*m01'')
+    m12' = m12 - (fDot0*m10' + fDot1*m11'')
+    m22' = m22 - (fDot0*m20' + fDot1*m21'')
 
-rotVecByEuler :: (Floating a, Ord a) => Euler a -> V3 a -> V3 a
-rotVecByEuler = rotVecByDcm . dcmOfEuler321
+    fInvLength2 = 1.0/sqrt(m02'*m02' + m12'*m12' + m22'*m22')
 
-rotVecByEulerB2A :: (Floating a, Ord a) => Euler a -> V3 a -> V3 a
-rotVecByEulerB2A = rotVecByDcmB2A . dcmOfEuler321
+    m02'' = m02' * fInvLength2
+    m12'' = m12' * fInvLength2
+    m22'' = m22' * fInvLength2
+
+    ret = (V3
+           (V3 m00' m01'' m02'')
+           (V3 m10' m11'' m12'')
+           (V3 m20' m21'' m22''))

@@ -6,7 +6,9 @@
 {-# Language DeriveFoldable #-}
 {-# Language DeriveTraversable #-}
 
-module Types ( Euler(..) ) where
+module SpatialMath.Euler
+  ( Euler(..)
+  ) where
 
 import GHC.Generics ( Generic, Generic1 )
 
@@ -19,11 +21,13 @@ import Data.Serialize ( Serialize )
 import Data.Binary ( Binary )
 
 -- | 3-2-1 Euler angle rotation sequence
-data Euler a = Euler { eYaw :: a
-                     , ePitch :: a
-                     , eRoll :: a
-                     } deriving ( Eq, Ord, Show, Functor, Foldable, Traversable
-                                , Data, Generic, Generic1 )
+data Euler a
+  = Euler
+    { eYaw :: a
+    , ePitch :: a
+    , eRoll :: a
+    } deriving ( Eq, Ord, Show, Functor, Foldable, Traversable
+               , Data, Generic, Generic1 )
 
 instance Serialize a => Serialize (Euler a)
 instance Binary a => Binary (Euler a)

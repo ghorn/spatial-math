@@ -1,8 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
-{-# Language ForeignFunctionInterface #-}
 
-module SpatialMath.Internal (
-  libm_atan2
+module SpatialMath.LibmFfi
+  ( libm_atan2
   , libm_atan2f
   ) where
 
