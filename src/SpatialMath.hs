@@ -36,6 +36,7 @@ import GHC.Generics ( Generic, Generic1 )
 import Codec.Serialise ( Serialise(..) )
 import Control.Applicative ( Applicative, pure)
 import Control.Compose ( (:.)(..), unO )
+import Control.Lens ( Lens' )
 import Data.Foldable ( Foldable )
 import Data.Binary ( Binary(..) )
 import Data.Serialize ( Serialize(..) )
@@ -59,18 +60,22 @@ newtype V3T f a = V3T {unV :: V3 a}
                          -- TODO(greg): add Serialise after Linear adds it.
                          )
 
+{-# INLINE v3TLens #-}
+v3TLens :: Lens' (V3T f a) (V3 a)
+v3TLens f = fmap V3T . f . unV
+
 instance R1 (V3T f) where
-  _x f (V3T v) = fmap V3T $ _x f v
+  _x = v3TLens . _x
   {-# INLINE _x #-}
 instance R2 (V3T f) where
-  _y f (V3T v) = fmap V3T $ _y f v
+  _y = v3TLens . _y
   {-# INLINE _y #-}
-  _xy f (V3T v) = fmap V3T $ _xy f v
+  _xy = v3TLens . _xy
   {-# INLINE _xy #-}
 instance R3 (V3T f) where
-  _z f (V3T v) = fmap V3T $ _z f v
+  _z = v3TLens . _z
   {-# INLINE _z #-}
-  _xyz f (V3T v) = fmap V3T $ _xyz f v
+  _xyz = v3TLens . _xyz
   {-# INLINE _xyz #-}
 
 cross :: Num a => V3T f a -> V3T f a -> V3T f a
