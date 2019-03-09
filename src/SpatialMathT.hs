@@ -31,6 +31,7 @@ module SpatialMathT
        , (:.)(..), unO
        ) where
 
+import Codec.Serialise ( Serialise(..) )
 import Control.Applicative ( Applicative, pure)
 import Control.Compose ( (:.)(..), unO )
 import Data.Foldable ( Foldable )
@@ -53,6 +54,7 @@ newtype V3T f a = V3T {unV :: V3 a}
                          , Num, Fractional, Eq, Show, Ord
                          , Generic1, Generic
                          , Serialize, Binary
+                         -- TODO(greg): add Serialise after Linear adds it.
                          )
 
 instance R1 (V3T f) where
@@ -79,7 +81,7 @@ newtype Rot f1 f2 r a =
            , Storable
            , Num, Fractional, Eq, Show, Ord
            , Generic1, Generic
-           , Serialize, Binary
+           , Binary, Serialize, Serialise
            )
 
 class Rotation g a where

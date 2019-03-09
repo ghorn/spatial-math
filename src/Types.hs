@@ -10,6 +10,7 @@ module Types ( Euler(..) ) where
 
 import GHC.Generics ( Generic, Generic1 )
 
+import Codec.Serialise ( Serialise )
 import Control.Applicative ( Applicative(..) )
 import Data.Data ( Data )
 import Data.Foldable ( Foldable )
@@ -26,6 +27,7 @@ data Euler a = Euler { eYaw :: a
 
 instance Serialize a => Serialize (Euler a)
 instance Binary a => Binary (Euler a)
+instance Serialise a => Serialise (Euler a)
 
 instance Applicative Euler where
   pure x = Euler x x x

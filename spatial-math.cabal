@@ -23,6 +23,7 @@ library
                        ghc-prim,
                        cereal,
                        binary,
+                       serialise,
                        linear >= 1.17.1,
                        lens,
                        TypeCompose >= 0.9.11
