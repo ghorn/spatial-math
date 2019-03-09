@@ -5,7 +5,6 @@
 
 module Main ( main ) where
 
-import Control.Applicative
 import qualified Data.Foldable as F
 import qualified Data.Monoid as Mo
 import Test.Framework
@@ -13,8 +12,6 @@ import Test.Framework
        , defaultMainWithOpts, testGroup )
 import Test.Framework.Providers.QuickCheck2 ( testProperty )
 import Test.QuickCheck
-import Test.QuickCheck.Arbitrary
--- import Test.QuickCheck.Gen
 import Text.Printf ( printf )
 
 import SpatialMath
