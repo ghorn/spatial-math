@@ -1,3 +1,6 @@
+HEAD
+- Drop Generic/Generic1/Typeable/Typeable1 instances for older GHCs
+
 0.5.0.1
 - Fix doctest include path.
 
