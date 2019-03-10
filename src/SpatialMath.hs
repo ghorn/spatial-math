@@ -1,5 +1,8 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# Language ScopedTypeVariables #-}
+{-# Language InstanceSigs #-}
+{-# Language TypeOperators #-}
+{-# Language TypeFamilies #-}
 
 module SpatialMath
   ( ArcTan2(..)
@@ -11,6 +14,8 @@ module SpatialMath
   , R1(..), R2(..), R3(..)
   , cross
   , orthonormalize
+
+    -- conversions
   , dcmOfQuat
   , dcmOfEuler321
   , quatOfDcm
@@ -19,12 +24,20 @@ module SpatialMath
   , unsafeEuler321OfDcm
   , euler321OfQuat
   , unsafeEuler321OfQuat
-  , rotVecByDcm
 
+    -- rotations
+  , Rotate(..)
   , transposeDcm, composeDcm
   , qmult, qtranspose
 
   , identity, qidentity
+
+    -- points
+  , type (-->)
+  , Plus
+  , Minus
+  , V3P(..), definePoint
+  , (.+.), (.-.), negateV
   ) where
 
 import Linear hiding ( cross, identity, normalize, transpose )
@@ -44,9 +57,18 @@ transposeDcm = DcmUnitVectors . L.transpose . getUnitVectors
 composeDcm :: Num a => Dcm f1 f2 a -> Dcm f2 f3 a -> Dcm f1 f3 a
 composeDcm (DcmUnitVectors dcm_a2b) (DcmUnitVectors dcm_b2c) = DcmUnitVectors (dcm_b2c !*! dcm_a2b)
 
--- | vec_b = R_a2b * vec_a
-rotVecByDcm :: Num a => Dcm f1 f2 a -> V3T f1 a -> V3T f2 a
-rotVecByDcm (DcmUnitVectors dcm) vec = dcm !* vec
+
+class Rotate g where
+  rot :: Num a => Dcm f1 f2 a -> g f1 a -> g f2 a
+
+instance Rotate V3T where
+  rot :: Num a => Dcm f1 f2 a -> V3T f1 a -> V3T f2 a
+  rot (DcmUnitVectors dcm) vec = dcm !* vec
+
+instance Rotate (V3P v) where
+  rot :: Num a => Dcm f g a -> V3P v f a -> V3P v g a
+  rot dcm (UnsafeV3P v) = UnsafeV3P (rot dcm v)
+
 
 identity :: Num a => Dcm f f a
 identity =
@@ -118,3 +140,133 @@ orthonormalize
       (V3T (V3 m00' m01'' m02''))
       (V3T (V3 m10' m11'' m12''))
       (V3T (V3 m20' m21'' m22'')))
+
+
+-- | Vector @v@ represented with bases @f@.
+newtype V3P v f a = UnsafeV3P {unsafeUnV3P :: V3T f a}
+
+-- | Origin of a frame $f$.
+data Origin f
+
+-- | Define point with respect to origin.
+definePoint :: V3T f a -> V3P (Origin f --> p) f a
+definePoint = UnsafeV3P
+
+-- | Vector from point to point.
+data f --> g
+infixl 8 --> -- TODO(greg): what the heck should this fixity be?
+
+-- | Vector addition
+data v1 `Plus` v2
+infixl 6 `Plus`
+
+-- | Vector subtraction.
+--data v2 `Minus` v1
+-- This isn't really needed, you can just define it as flip (-->):
+type Minus v2 v1 = v1 --> v2
+infixl 6 `Minus`
+
+-- | Type family for basic vector arithmetic simplification
+type family Simplify a where
+  -- (a -> b) + (b -> c) == a -> c
+  Simplify ((a --> b) `Plus` (b --> c)) = Simplify (a --> c)
+  -- (b -> c) + (a -> b) == a -> c
+  Simplify ((b --> c) `Plus` (a --> b)) = Simplify (a --> c)
+
+--  -- (a -> c) - (b -> c) == (a -> b)
+--  Simplify ((a --> c) `Minus` (b --> c)) = Simplify (a --> b)  -- redundant if Minus is a type alias
+--  -- (a -> c) - (a -> b) == (b -> c)
+--  Simplify ((a --> c) `Minus` (a --> b)) = Simplify (b --> c)  -- redundant if Minus is a type alias
+
+  Simplify ((a `Plus` b) `Minus` a) = Simplify b
+  Simplify ((a `Minus` b) `Plus` b) = Simplify a
+--  Simplify (a --> (a `Plus` b)) = Simplify b  -- redundant if Minus is a type alias
+
+  -- (a -> c) - (b -> c) == (a -> b)
+  Simplify ((b --> c) --> (a --> c)) = Simplify (a --> b)
+  -- (a -> c) - (a -> b) == (b -> c)
+  Simplify ((a --> b) --> (a --> c)) = Simplify (b --> c)
+
+  -- should we support unit?
+  Simplify (a --> a) = ()
+  Simplify (a `Plus` ()) = Simplify a
+  Simplify (a `Minus` ()) = Simplify a
+  Simplify (() `Plus` a) = Simplify a
+  Simplify (() `Minus` (a --> b)) = Simplify (b --> a)
+
+  -- If no simplifications can be made at the top level, recurse.
+  -- It would be nice to iterate here, so if a simplification was made it would
+  -- start the patterm matching over, but if no simplification was made then it would stop.
+  -- I don't know how to write that.
+  -- Maybe type level tics, like
+  --
+  --   type family Simplify n a where
+  --     Simplify 0 (a --> b) = (Simplify a) --> (Simplify b)
+  --     Simplify n (a --> b) = Simplify (n - 1) ((Simplify a) --> (Simplify b))
+  --
+  Simplify (a --> b) = (Simplify a) --> (Simplify b)
+  Simplify (a `Plus` b) = (Simplify a) `Plus` (Simplify b)
+  --Simplify (a `Minus` b) = (Simplify a) `Minus` (Simplify b) -- redundant if Minus is a type alias
+
+  -- base case where nothing more can be done
+  Simplify a = a
+
+-- | vector addition
+infixl 6 .+.
+(.+.) :: Num a => V3P v1 f a -> V3P v2 f a -> V3P (Simplify (v1 `Plus` v2)) f a
+(.+.) (UnsafeV3P x) (UnsafeV3P y) = UnsafeV3P (x ^+^ y)
+
+-- | vector subtraction
+infixl 6 .-.
+(.-.) :: Num a => V3P v2 f a -> V3P v1 f a -> V3P (Simplify (v1 --> v2)) f a
+--(.-.) :: Num a => V3P v2 f a -> V3P v1 f a -> V3P (Simplify (v2 `Minus` v1)) f a
+(.-.) (UnsafeV3P y) (UnsafeV3P x) = UnsafeV3P (y ^-^ x)
+
+-- | vector negation
+negateV :: Num a => V3P (a --> b) f a -> V3P (b --> a) f a
+negateV (UnsafeV3P x) = UnsafeV3P (negate <$> x)
+
+
+--------- The rest of this file is a test of vector composition/subtraction ---------
+data A
+data B
+data C
+
+data F -- frame
+
+-- origin convenience alias
+-- type V3O p0 p1 f = V3P (Origin f) p1 f
+
+------------ define three points in frame F -------
+_va :: V3P (Origin F --> A) F Double
+_va = definePoint (V3T (V3 1 2 3))
+
+_vb :: V3P (Origin F --> B) F Double
+_vb = definePoint (V3T (V3 4 5 6))
+
+_vc :: V3P (Origin F --> C) F Double
+_vc = definePoint (V3T (V3 7 8 9))
+
+--------- difference them and make sure types line up ----------
+-- vector from b to c
+_vbc :: V3P (B --> C) F Double
+_vbc = _vc .-. _vb
+
+-- vector from a to b
+_vab :: V3P (A --> B) F Double
+_vab = _vb .-. _va
+
+--------- compose differences and make sure types line up ----------
+-- vector from a to c
+_vac :: V3P (A --> C) F Double
+_vac = _vab .+. _vbc
+
+-- vector from origin to c
+_vc' :: V3P (Origin F --> C) F Double
+_vc' = (_va .+. _vc) .-. _va
+
+_vc'' :: V3P (Origin F --> C) F Double
+_vc'' = (_vc .-. _va) .+. _va
+
+_vc''' :: V3P (Origin F --> C) F Double
+_vc''' = _va .+. (_vc .-. _va)
