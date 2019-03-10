@@ -18,19 +18,19 @@ library
 
   exposed-modules:     SpatialMath
                        SpatialMath.ArcTan2
-                       SpatialMath.Euler
-                       SpatialMath.Untyped
+                       SpatialMath.Conversions
+                       SpatialMath.Types
 
   other-modules:       SpatialMath.LibmFfi
 
   build-depends:       base >= 4 && < 5,
-                       ghc-prim,
-                       cereal,
                        binary,
+                       cereal,
+                       distributive,
+                       ghc-prim,
                        serialise,
                        linear >= 1.17.1,
-                       lens,
-                       TypeCompose >= 0.9.11
+                       lens
 
   default-language:    Haskell2010
 

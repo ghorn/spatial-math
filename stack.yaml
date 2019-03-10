@@ -9,5 +9,5 @@ packages:
 - .
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
-extra-deps: [ TypeCompose-0.9.14
+extra-deps: [
             ]
