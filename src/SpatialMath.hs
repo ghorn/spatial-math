@@ -28,22 +28,19 @@ module SpatialMath
   , euler321OfQuat
   , unsafeEuler321OfQuat
     -- * re-export for convenience
-  , (:.)(..), unO
+  , Compose(..)
   ) where
 
 import GHC.Generics ( Generic, Generic1 )
 
 import Codec.Serialise ( Serialise(..) )
-import Control.Applicative ( Applicative, pure)
-import Control.Compose ( (:.)(..), unO )
 import Control.Lens ( Lens' )
-import Data.Foldable ( Foldable )
 import Data.Binary ( Binary(..) )
 import Data.Serialize ( Serialize(..) )
-import Data.Traversable ( Traversable )
 import Foreign.Storable ( Storable )
 import Linear hiding ( cross, normalize, transpose )
 import qualified Linear as L
+import Data.Functor.Compose
 
 import SpatialMath.ArcTan2 ( ArcTan2(..) )
 import SpatialMath.Euler ( Euler(..) )
@@ -112,49 +109,47 @@ instance Num a => Rotation Quaternion a where
   transpose (Rot (Quaternion q0 qxyz)) = Rot (Quaternion q0 (fmap negate qxyz))
   identity = Rot (Quaternion 1 (pure 0))
 
-instance Num a => Rotation (V3 :. V3) a where
-  compose (Rot (O dcm_a2b)) (Rot (O dcm_b2c)) = Rot $ O (dcm_b2c !*! dcm_a2b)
-  rot  (Rot (O dcm_a2b)) (V3T va) = V3T (SM.rotVecByDcm    dcm_a2b va)
-  rot' (Rot (O dcm_a2b)) (V3T vb) = V3T (SM.rotVecByDcmB2A dcm_a2b vb)
+instance Num a => Rotation (Compose V3 V3) a where
+  compose (Rot (Compose dcm_a2b)) (Rot (Compose dcm_b2c)) = Rot $ Compose (dcm_b2c !*! dcm_a2b)
+  rot  (Rot (Compose dcm_a2b)) (V3T va) = V3T (SM.rotVecByDcm    dcm_a2b va)
+  rot' (Rot (Compose dcm_a2b)) (V3T vb) = V3T (SM.rotVecByDcmB2A dcm_a2b vb)
   transpose
     (Rot
-     (O
+     (Compose
       (V3
        (V3 e11 e12 e13)
        (V3 e21 e22 e23)
        (V3 e31 e32 e33)))) =
-    Rot $ O $
+    Rot $ Compose $
     V3
     (V3 e11 e21 e31)
     (V3 e12 e22 e32)
     (V3 e13 e23 e33)
   identity =
-    Rot $ O $
+    Rot $ Compose $
     V3
     (V3 1 0 0)
     (V3 0 1 0)
     (V3 0 0 1)
 
 
-dcmOfQuat :: Num a => Rot f g Quaternion a -> Rot f g (V3 :. V3) a
-dcmOfQuat = Rot . O . SM.dcmOfQuat . unRot
+dcmOfQuat :: Num a => Rot f g Quaternion a -> Rot f g (Compose V3 V3) a
+dcmOfQuat = Rot . Compose . SM.dcmOfQuat . unRot
 
-dcmOfEuler321 :: Floating a => Rot f g Euler a -> Rot f g (V3 :. V3) a
-dcmOfEuler321 = Rot . O . SM.dcmOfEuler321 . unRot
+dcmOfEuler321 :: Floating a => Rot f g Euler a -> Rot f g (Compose V3 V3) a
+dcmOfEuler321 = Rot . Compose . SM.dcmOfEuler321 . unRot
 
-
-quatOfDcm :: (Floating a, Ord a) => Rot f g (V3 :. V3) a -> Rot f g Quaternion a
-quatOfDcm = Rot . SM.quatOfDcm . unO . unRot
+quatOfDcm :: (Floating a, Ord a) => Rot f g (Compose V3 V3) a -> Rot f g Quaternion a
+quatOfDcm = Rot . SM.quatOfDcm . getCompose . unRot
 
 quatOfEuler321 :: Floating a => Rot f g Euler a -> Rot f g Quaternion a
 quatOfEuler321 = Rot . SM.quatOfEuler321 . unRot
 
+unsafeEuler321OfDcm :: ArcTan2 a => Rot f g (Compose V3 V3) a -> Rot f g Euler a
+unsafeEuler321OfDcm = Rot . SM.unsafeEuler321OfDcm . getCompose . unRot
 
-unsafeEuler321OfDcm :: ArcTan2 a => Rot f g (V3 :. V3) a -> Rot f g Euler a
-unsafeEuler321OfDcm = Rot . SM.unsafeEuler321OfDcm . unO . unRot
-
-euler321OfDcm :: (ArcTan2 a, Ord a) => Rot f g (V3 :. V3) a -> Rot f g Euler a
-euler321OfDcm = Rot . SM.euler321OfDcm . unO . unRot
+euler321OfDcm :: (ArcTan2 a, Ord a) => Rot f g (Compose V3 V3) a -> Rot f g Euler a
+euler321OfDcm = Rot . SM.euler321OfDcm . getCompose . unRot
 
 euler321OfQuat :: (ArcTan2 a, Ord a) => Rot f g Quaternion a -> Rot f g Euler a
 euler321OfQuat = Rot . SM.euler321OfQuat . unRot
@@ -175,15 +170,14 @@ instance (ArcTan2 a, Floating a, Ord a) => Rotation Euler a where
   transpose = euler321OfQuat . transpose . quatOfEuler321
   identity = Rot (Euler 0 0 0)
 
-
-orthonormalize :: Floating a => Rot f1 f2 (V3 :. V3) a -> Rot f1 f2 (V3 :. V3) a
+orthonormalize :: Floating a => Rot f1 f2 (Compose V3 V3) a -> Rot f1 f2 (Compose V3 V3) a
 orthonormalize
   (Rot
-   (O
+   (Compose
     (V3
      (V3 m00 m01 m02)
      (V3 m10 m11 m12)
-     (V3 m20 m21 m22)))) = Rot (O ret)
+     (V3 m20 m21 m22)))) = Rot (Compose ret)
   where
     -- compute q0
     fInvLength0 = 1.0/sqrt(m00*m00 + m10*m10 + m20*m20)

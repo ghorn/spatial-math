@@ -1,6 +1,6 @@
 # For more information, see: https://github.com/commercialhaskell/stack/blob/release/doc/yaml_configuration.md
 
-resolver: lts-13.11
+resolver: lts-20.4
 
 compiler-check: newer-minor
 
@@ -8,6 +8,3 @@ compiler-check: newer-minor
 packages:
 - .
 
-# Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
-extra-deps: [ TypeCompose-0.9.14
-            ]
