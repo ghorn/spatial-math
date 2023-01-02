@@ -13,10 +13,7 @@ module SpatialMath.Euler
 import GHC.Generics ( Generic, Generic1 )
 
 import Codec.Serialise ( Serialise )
-import Control.Applicative ( Applicative(..) )
 import Data.Data ( Data )
-import Data.Foldable ( Foldable )
-import Data.Traversable ( Traversable )
 import Data.Serialize ( Serialize )
 import Data.Binary ( Binary )
 

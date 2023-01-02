@@ -1,0 +1,51 @@
+name:                spatial-math
+version:             0.5.0.2
+synopsis:            3d math including quaternions/euler angles/dcms and utility functions
+license:             BSD3
+license-file:        LICENSE
+author:              Greg Horn
+maintainer:          gregmainland@gmail.com
+copyright:           Copyright (c) 2012-2019, Greg Horn
+category:            Math
+github:              ghorn/spatial-math
+tested-with:           GHC==9.2
+
+extra-source-files:
+  - README.md
+  - changelog.txt
+
+library:
+  source-dirs:      src
+  dependencies:
+    - base
+    - ghc-prim
+    - cereal
+    - binary
+    - serialise
+    - linear
+    - lens
+  ghc-options:         -Wall -Werror
+
+tests:
+  doctests:
+    main: doctests.hs
+    source-dirs: tests
+    when:
+      - condition: false
+        other-modules: Main
+    dependencies:
+      - base
+      - doctest
+    ghc-options: -O2 -threaded -Wall -Werror
+    build-tools: doctest-discover
+
+  unit-tests:
+    main: Main.hs
+    source-dirs: tests
+    dependencies:
+      - base
+      - spatial-math
+      - QuickCheck
+      - test-framework
+      - test-framework-quickcheck2
+    ghc-options: -O2 -Wall -Werror
